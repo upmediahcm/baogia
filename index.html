@@ -31,6 +31,20 @@
         .animate-fadeIn {
             animation: fadeIn 0.25s ease-out forwards;
         }
+        /* Hiệu ứng nhấp nháy nhẹ nhàng gây chú ý cho nút thêm vào báo giá */
+        @keyframes gentle-pulse {
+            0%, 100% {
+                box-shadow: 0 4px 10px 0 rgba(255, 255, 255, 0.1), 0 0 0 0 rgba(255, 255, 255, 0);
+                filter: brightness(1);
+            }
+            50% {
+                box-shadow: 0 4px 20px 4px rgba(255, 255, 255, 0.25), 0 0 12px 2px rgba(255, 255, 255, 0.2);
+                filter: brightness(1.12);
+            }
+        }
+        .animate-gentle-pulse {
+            animation: gentle-pulse 2s infinite ease-in-out;
+        }
         /* Ẩn thanh cuộn tự động trên các vùng chứa */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
@@ -57,7 +71,7 @@
                 padding: 0 !important;
                 background: white !important;
                 color: black !important;
-            }
+                }
             .print-card {
                 border: none !important;
                 box-shadow: none !important;
@@ -86,20 +100,25 @@
             // Thông tin nhà cung cấp dịch vụ
             const [providerName, setProviderName] = useState("UP MEDIA");
 
-            // Thông tin khách hàng và định danh báo giá
-            const [clientName, setClientName] = useState("Công ty TNHH Giải Pháp Công Nghệ Mới");
-            const [clientContact, setClientContact] = useState("Anh Hoàng Minh (Trưởng phòng Marketing)");
-            const [projectName, setProjectName] = useState("Chiến dịch Truyền thông Mùa hè 2026");
+            // Thông tin khách hàng và định danh báo giá - Mặc định để trống hoàn toàn theo yêu cầu
+            const [clientName, setClientName] = useState("");
+            const [clientContact, setClientContact] = useState("");
+            const [projectName, setProjectName] = useState("");
             const [quoteId, setQuoteId] = useState(`BG-26-${Math.floor(1000 + Math.random() * 9000)}`);
             const [quoteDate, setQuoteDate] = useState(new Date().toLocaleDateString('vi-VN'));
 
             // Trạng thái của Tab sản phẩm hiện tại
             const [activeCategory, setActiveCategory] = useState('QUANG_CAO'); // QUANG_CAO, XAY_KENH, QUAY_BDS, EVENT, DICH_VU_LE
+            const [activeMenuId, setActiveMenuId] = useState(null); // Quản lý ID dòng đang được click để chọn menu ẩn
+
+            // Trạng thái modal cảnh báo chuyển đổi Dòng Sản Phẩm Cấu Hình
+            const [showConfirmModal, setShowConfirmModal] = useState(false);
+            const [pendingCategory, setPendingCategory] = useState(null);
 
             // Danh sách hóa đơn tích lũy được hợp nhất
             const [invoiceItems, setInvoiceItems] = useState([]);
             const [discountPercent, setDiscountPercent] = useState(0);
-            const [vatPercent, setVatPercent] = useState(10); // Mặc định VAT 10%
+            const [vatPercent, setVatPercent] = useState(0); // Mặc định không có VAT (0%)
             const [note, setNote] = useState("Báo giá trên chưa bao gồm chi phí di chuyển ngoại thành hoặc đi tỉnh.");
             const [showTotal, setShowTotal] = useState(true); 
             
@@ -107,37 +126,71 @@
             const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
             const [isGeneratingPNG, setIsGeneratingPNG] = useState(false);
 
-            // 1. STATE CHO GÓI QUẢNG CÁO
+            // 1. STATE CHO GÓI QUẢNG CÁO - Cập nhật mặc định các tùy chọn số lượng bằng 0
             const [qcOption, setQcOption] = useState('1_2_CLIPS'); 
-            const [qcMauQty, setQcMauQty] = useState(1); 
-            const [qcIncludeQuay, setQcIncludeQuay] = useState(true);
-            const [qcDungQty, setQcDungQty] = useState(1);
-            const [qcKichBanQty, setQcKichBanQty] = useState(1);
+            const [qcMauQty, setQcMauQty] = useState(0); 
+            const [qcIncludeQuay, setQcIncludeQuay] = useState(false);
+            const [qcDungQty, setQcDungQty] = useState(0);
+            const [qcKichBanQty, setQcKichBanQty] = useState(0);
 
-            // 2. STATE CHO GÓI XÂY KÊNH
+            // 2. STATE CHO GÓI XÂY KÊNH - Cập nhật mặc định các tùy chọn số lượng bằng 0
             const [xkPackage, setXkPackage] = useState('THUONG_20'); 
             const [xkModelNoVoiceDays, setXkModelNoVoiceDays] = useState(0);
             const [xkModelVoiceDays, setXkModelVoiceDays] = useState(0);
 
-            // 3. STATE CHO GÓI QUAY BẤT ĐỘNG SẢN
+            // 3. STATE CHO GÓI QUAY BẤT ĐỘNG SẢN - Cập nhật mặc định các tùy chọn số lượng bằng 0
             const [bdsSubCategory, setBdsSubCategory] = useState('QC_BDS'); 
-            const [bdsKichBanQty, setBdsKichBanQty] = useState(1);
-            const [bdsDungQty, setBdsDungQty] = useState(1);
-            const [bdsQuayDays, setBdsQuayDays] = useState(1);
+            const [bdsKichBanQty, setBdsKichBanQty] = useState(0);
+            const [bdsDungQty, setBdsDungQty] = useState(0);
+            const [bdsQuayDays, setBdsQuayDays] = useState(0);
+            const [bdsFlycamDays, setBdsFlycamDays] = useState(0);
             const [bdsMauDays, setBdsMauDays] = useState(0);
 
-            // 4. STATE CHO GÓI SỰ KIỆN (EVENT)
+            // 4. STATE CHO GÓI SỰ KIỆN (EVENT) - Cập nhật mặc định các tùy chọn số lượng bằng 0
             const [eventPackage, setEventPackage] = useState('GOI_1'); 
             const [eventDuration, setEventDuration] = useState('HALF_DAY'); 
+            const [eventFlycamDays, setEventFlycamDays] = useState(0); 
 
-            // 5. STATE CHO DỊCH VỤ LẺ
-            const [dlQuayOption, setDlQuayOption] = useState('NONE'); // NONE, HALF_DAY (Nửa ngày), FULL_DAY (Nguyên ngày)
+            // 5. STATE CHO DỊCH VỤ LẺ - Cập nhật mặc định các tùy chọn số lượng bằng 0
+            const [dlQuayOption, setDlQuayOption] = useState('NONE'); 
             const [dlDungQty, setDlDungQty] = useState(0);
             const [dlKichBanQty, setDlKichBanQty] = useState(0);
-            const [dlMauOption, setDlMauOption] = useState('HALF_DAY'); // HALF_DAY, FULL_DAY
+            const [dlMauOption, setDlMauOption] = useState('HALF_DAY'); 
             const [dlMauQty, setDlMauQty] = useState(0);
 
-            // --- HELPER BUILDERS TRÁNH LỖI BIÊN DỊCH BABEL TRÊN TRÌNH DUYỆT ---
+            // Hiệu ứng tự động xóa bảng báo giá và thu hồi menu ẩn khi thay đổi DÒNG SẢN PHẨM CẤU HÌNH
+            useEffect(() => {
+                setInvoiceItems([]);
+                setActiveMenuId(null);
+            }, [activeCategory]);
+
+            // Hàm xử lý tương tác thông minh khi click đổi dòng sản phẩm
+            const handleCategoryClick = (category) => {
+                if (category === activeCategory) return;
+                
+                // Nếu đang có hạng mục trong báo giá, hiện cảnh báo tùy chỉnh
+                if (invoiceItems.length > 0) {
+                    setPendingCategory(category);
+                    setShowConfirmModal(true);
+                } else {
+                    setActiveCategory(category);
+                }
+            };
+
+            const confirmCategoryChange = () => {
+                if (pendingCategory) {
+                    setActiveCategory(pendingCategory);
+                }
+                setShowConfirmModal(false);
+                setPendingCategory(null);
+            };
+
+            const cancelCategoryChange = () => {
+                setShowConfirmModal(false);
+                setPendingCategory(null);
+            };
+
+            // --- HELPER BUILDERS TRÁNH LỖI BIÊN DỊCH JAVASCRIPT/BABEL ---
             const getTabClass = (category) => {
                 const active = activeCategory === category;
                 return "py-3 px-2 rounded-lg text-xs font-bold tracking-wider transition-all duration-75 uppercase " + 
@@ -165,8 +218,8 @@
                 const isSelected = xkPackage === pkg;
                 return "p-3.5 rounded-xl border cursor-pointer transition flex flex-col justify-between " + 
                     (isSelected 
-                    ? "bg-zinc-850 border-zinc-400 text-white shadow-md" 
-                    : "bg-zinc-800 border-zinc-900 hover:border-zinc-700");
+                    ? "bg-zinc-800 border-zinc-400 text-white shadow-md" 
+                    : "bg-zinc-900 border-zinc-800 hover:border-zinc-700");
             };
 
             const getEventPackageClass = (pkg) => {
@@ -264,47 +317,78 @@
                 } 
                 else if (activeCategory === 'XAY_KENH') {
                     categoryName = "Dịch Vụ Xây Kênh TikTok/Reels/Shorts";
+                    let qty = 20;
+                    let kbPrice = 200000;
+                    let dungPrice = 300000;
+                    let quayPrice = 5000000;
+                    let pkgTitle = "";
+
                     if (xkPackage === 'THUONG_20') {
-                        items.push({
-                            id: 'xk_goithuong20',
-                            name: "GÓI THƯỜNG XÂY KÊNH (20 Video / Tháng)",
-                            desc: "Thiết bị: Máy quay Sony chuyên dụng | Định dạng: Chuẩn 4K / 30 FPS (8 bit) | Đã bao gồm kịch bản, buổi quay và dựng hoàn thiện.",
-                            qty: 1,
-                            unitPrice: 15000000,
-                            subtotal: 15000000,
-                            breakdown: "Kịch bản: 200k × 20 = 4tr | Dựng clip: 300k × 20 = 6tr | Chi phí quay phim: 5tr"
-                        });
+                        qty = 20;
+                        kbPrice = 200000;
+                        dungPrice = 300000;
+                        quayPrice = 5000000;
+                        pkgTitle = "Gói Thường 20 Video";
                     } else if (xkPackage === 'THUONG_30') {
-                        items.push({
-                            id: 'xk_goithuong30',
-                            name: "GÓI THƯỜNG XÂY KÊNH (30 Video / Tháng)",
-                            desc: "Thiết bị: Máy quay Sony chuyên dụng | Định dạng: Chuẩn 4K / 30 FPS (8 bit) | Tối ưu tần suất phủ kênh liên tục trong tháng.",
-                            qty: 1,
-                            unitPrice: 21000000,
-                            subtotal: 21000000,
-                            breakdown: "Kịch bản: 200k × 30 = 6tr | Dựng clip: 300k × 30 = 9tr | Chi phí quay phim: 6tr"
-                        });
+                        qty = 30;
+                        kbPrice = 200000;
+                        dungPrice = 300000;
+                        quayPrice = 6000000;
+                        pkgTitle = "Gói Thường 30 Video";
                     } else if (xkPackage === 'CAOCAP_20') {
-                        items.push({
-                            id: 'xk_goicaocap20',
-                            name: "GÓI CAO CẤP XÂY KÊNH (20 Video / Tháng)",
-                            desc: "Thiết bị: Máy quay Sony đời mới | Định dạng: Chuẩn 4K / 60 FPS (10 bit 4:2:2) | Màu sắc chuẩn điện ảnh, tối ưu chi tiết hậu kỳ tốt hơn.",
-                            qty: 1,
-                            unitPrice: 18000000,
-                            subtotal: 18000000,
-                            breakdown: "Kịch bản: 200k × 20 = 4tr | Dựng clip: 500k × 20 = 10tr | Chi phí quay phim: 4tr"
-                        });
+                        qty = 20;
+                        kbPrice = 200000;
+                        dungPrice = 500000;
+                        quayPrice = 4000000;
+                        pkgTitle = "Gói Cao Kênh 20 Video";
                     } else if (xkPackage === 'CAOCAP_30') {
-                        items.push({
-                            id: 'xk_goicaocap30',
-                            name: "GÓI CAO CẤP XÂY KÊNH (30 Video / Tháng)",
-                            desc: "Thiết bị: Máy quay Sony đời mới | Định dạng: Chuẩn 4K / 60 FPS (10 bit 4:2:2) | Đảm bảo tần suất dày đặc lẫn chất lượng hình ảnh thẩm mỹ đỉnh cao.",
-                            qty: 1,
-                            unitPrice: 26000000,
-                            subtotal: 26000000,
-                            breakdown: "Kịch bản: 200k × 30 = 6tr | Dựng clip: 500k × 30 = 15tr | Chi phí quay phim: 5tr"
-                        });
+                        qty = 30;
+                        kbPrice = 200000;
+                        dungPrice = 500000;
+                        quayPrice = 5000000;
+                        pkgTitle = "Gói Cao Cấp 30 Video";
                     }
+
+                    // Thêm Header ẩn (giúp giao diện live A4 nhận diện nhóm nội dung)
+                    items.push({
+                        id: 'xk_pkg_header',
+                        name: "Hạng Mục Xây Kênh: " + pkgTitle + " / Tháng",
+                        desc: "Dịch vụ sản xuất nội dung video ngắn trọn gói định kỳ.",
+                        qty: 1,
+                        unitPrice: 0,
+                        subtotal: 0,
+                        isHeader: true
+                    });
+
+                    // Chi tiết kịch bản
+                    items.push({
+                        id: 'xk_kb',
+                        name: "Biên soạn kịch bản video chi tiết (" + pkgTitle + ")",
+                        desc: "Ý tưởng sáng tạo, lời thoại, bố cục phân cảnh và định hướng góc quay.",
+                        qty: qty,
+                        unitPrice: kbPrice,
+                        subtotal: qty * kbPrice
+                    });
+
+                    // Chi tiết quay phim
+                    items.push({
+                        id: 'xk_quay',
+                        name: "Quay phim & Thiết bị bối cảnh (" + pkgTitle + ")",
+                        desc: "Nhân sự quay cùng hệ thống máy Sony chuyên dụng bối cảnh thực tế.",
+                        qty: 1,
+                        unitPrice: quayPrice,
+                        subtotal: quayPrice
+                    });
+
+                    // Chi tiết dựng phim
+                    items.push({
+                        id: 'xk_dung',
+                        name: "Hậu kỳ dựng clip video hoàn thiện (" + pkgTitle + ")",
+                        desc: "Cắt ghép, tinh chỉnh nhịp, chuyển cảnh, hiệu ứng âm thanh & nhạc thương mại.",
+                        qty: qty,
+                        unitPrice: dungPrice,
+                        subtotal: qty * dungPrice
+                    });
 
                     if (xkModelNoVoiceDays > 0) {
                         items.push({
@@ -345,8 +429,8 @@
                     if (bdsKichBanQty > 0) {
                         items.push({
                             id: 'bds_kb',
-                            name: `Kịch bản BDS (${isQc ? 'Quảng Cáo' : 'Xây Kênh'})`,
-                            desc: `Ý tưởng đột phá giới thiệu kiến trúc & tiện ích. Đơn giá: ${formatVND(kbPrice)}/kb.`,
+                            name: "Kịch bản BDS (" + (isQc ? "Quảng Cáo" : "Xây Kênh") + ")",
+                            desc: "Ý tưởng đột phá giới thiệu kiến trúc & tiện ích. Đơn giá: " + formatVND(kbPrice) + "/kb.",
                             qty: bdsKichBanQty,
                             unitPrice: kbPrice,
                             subtotal: bdsKichBanQty * kbPrice
@@ -365,11 +449,21 @@
                     if (bdsQuayDays > 0) {
                         items.push({
                             id: 'bds_quay',
-                            name: "Chi phí quay phim tại công trình/BDS",
-                            desc: "Quay phim chuyên nghiệp bằng máy ảnh Mirrorless + Flycam cơ bản bao quát dự án. Đơn giá: 3.000.000đ/ngày.",
+                            name: "Quay lấy source không bao gồm flycam",
+                            desc: "Quay phim chuyên nghiệp bối cảnh dự án bất động sản bằng hệ thống máy Mirrorless cầm tay chuyên dụng. Đơn giá: 3.000.000đ/ngày.",
                             qty: bdsQuayDays,
                             unitPrice: 3000000,
                             subtotal: bdsQuayDays * 3000000
+                        });
+                    }
+                    if (bdsFlycamDays > 0) {
+                        items.push({
+                            id: 'bds_flycam',
+                            name: "Thiết bị & Nhân sự Flycam chuyên nghiệp",
+                            desc: "Góc quay không trung bao quát toàn bộ tiến độ, vị trí địa lý dự án tầm cao. Đơn giá cố định: 2.000.000đ/ngày (Chưa bao gồm giấy phép).",
+                            qty: bdsFlycamDays,
+                            unitPrice: 2000000,
+                            subtotal: bdsFlycamDays * 2000000
                         });
                     }
                     if (bdsMauDays > 0) {
@@ -378,7 +472,7 @@
                             name: "Nhân sự MC/Mẫu trải nghiệm BDS",
                             desc: "Dẫn dắt trực quan, tạo niềm tin cho người xem về dự án bất động sản thực tế. Đơn giá: 2.500.000đ/ngày.",
                             qty: bdsMauDays,
-                            unitPrice: 2500000,
+                            unitPrice: 2500005,
                             subtotal: bdsMauDays * 2500000
                         });
                     }
@@ -387,27 +481,94 @@
                     categoryName = "Dịch Vụ Quay Chụp Sự Kiện (Event)";
                     const isGoi1 = eventPackage === 'GOI_1';
                     const isHalf = eventDuration === 'HALF_DAY';
-                    let price = 0;
+                    let durationTitle = isHalf ? "Nửa ngày" : "Nguyên ngày";
+                    
+                    // Tên gói theo yêu cầu của người dùng
+                    let pkgTitle = isGoi1 ? "Gói Cơ Bản (1 quay 1 chụp)" : "Gói Cao Cấp (2 quay 1 chụp)";
+                    
+                    let quayPrice = 0;
+                    let chupPrice = 0;
+                    let dungPrice = 0;
 
+                    // Cấu hình cập nhật chi tiết cách tính giá sự kiện theo yêu cầu của người dùng
                     if (isGoi1) {
-                        price = isHalf ? 5000000 : 8000000;
-                        items.push({
-                            id: 'event_pkg',
-                            name: `GÓI 1: Quay 1 Chụp - Sự kiện (${isHalf ? 'Nửa ngày' : 'Nguyên ngày'})`,
-                            desc: "Bao gồm 01 thợ quay phim chính, 01 thợ chụp hình. Thiết bị tiêu chuẩn, bàn giao file ảnh đã chỉnh màu và video recap.",
-                            qty: 1,
-                            unitPrice: price,
-                            subtotal: price
-                        });
+                        if (isHalf) {
+                            // Nửa ngày dưới 4 tiếng: quay 3tr, chụp 1,5tr, dựng 500k
+                            quayPrice = 3000000;
+                            chupPrice = 1500000;
+                            dungPrice = 500000; // Tổng: 5.000.000 đ
+                        } else {
+                            // 1 ngày 8 tiếng: quay 5tr, chụp 2tr5, dựng 500k
+                            quayPrice = 5000000;
+                            chupPrice = 2500000;
+                            dungPrice = 500000; // Tổng: 8.000.000 đ
+                        }
                     } else {
-                        price = isHalf ? 8000000 : 12000000;
+                        if (isHalf) {
+                            // Nửa ngày dưới 4 tiếng: quay 2 máy giá là 5tr, chụp 1 máy giá là 2tr, Dựng là 1tr
+                            quayPrice = 5000000;
+                            chupPrice = 2000000;
+                            dungPrice = 1000000; // Tổng: 8.000.000 đ
+                        } else {
+                            // 1 ngày 8 tiếng: quay 2 máy là 8tr, chụp là 2tr5, dựng 1tr5
+                            quayPrice = 8000000;
+                            chupPrice = 2500000;
+                            dungPrice = 1500005; // Tổng: 12.000.000 đ
+                        }
+                    }
+
+                    // Tiêu đề ẩn cho nhóm sự kiện
+                    items.push({
+                        id: 'event_pkg_header',
+                        name: "Hạng Mục Sự Kiện: " + pkgTitle + " - " + durationTitle,
+                        desc: "Ghi hình và chụp ảnh tư liệu sự kiện chuyên nghiệp. Cả 2 gói đều không bao gồm Flycam.",
+                        qty: 1,
+                        unitPrice: 0,
+                        subtotal: 0,
+                        isHeader: true
+                    });
+
+                    // Chi tiết nhân sự quay phim
+                    items.push({
+                        id: 'event_quay',
+                        name: isGoi1 ? "Nhân sự quay phim sự kiện (01 Máy - " + durationTitle + ")" : "Nhân sự quay phim sự kiện (02 Máy - " + durationTitle + ")",
+                        desc: isGoi1 
+                            ? "01 Thợ quay chính, thiết bị tiêu chuẩn cao, bám sát chương trình. Không bao gồm flycam."
+                            : "02 Thợ quay chính (2 góc máy độc lập), thiết bị cao cấp, bám sát chương trình. Không bao gồm flycam.",
+                        qty: 1,
+                        unitPrice: quayPrice,
+                        subtotal: quayPrice
+                    });
+
+                    // Chi tiết nhân sự chụp hình
+                    items.push({
+                        id: 'event_chup',
+                        name: isGoi1 ? "Nhân sự chụp hình sự kiện (" + durationTitle + ")" : "Nhân sự chụp hình sự kiện (01 Máy - " + durationTitle + ")",
+                        desc: "01 Thợ chụp chính bám sát hiện trường, ghi nhận toàn bộ khoảnh khắc chính và bàn giao file ảnh đã chỉnh màu.",
+                        qty: 1,
+                        unitPrice: chupPrice,
+                        subtotal: chupPrice
+                    });
+
+                    // Chi tiết hậu kỳ recap
+                    items.push({
+                        id: 'event_dung',
+                        name: "Hậu kỳ dựng video Recap hoàn thiện",
+                        desc: "Cắt ghép, tinh chỉnh màu sắc, ghép nhạc không khí sôi động thương mại (Thời lượng 1-3 phút).",
+                        qty: 1,
+                        unitPrice: dungPrice,
+                        subtotal: dungPrice
+                    });
+
+                    // Thêm hạng mục Flycam bổ sung cho Event nếu có cấu hình
+                    if (eventFlycamDays > 0) {
                         items.push({
-                            id: 'event_pkg',
-                            name: `GÓI 2: Quay 1 Chụp - Sự kiện (${isHalf ? 'Nửa ngày' : 'Nguyên ngày'})`,
-                            desc: "Thiết bị cao cấp, nhân sự kỳ cựu, hậu kỳ kỹ lưỡng nghệ thuật hơn, xuất video recap điện ảnh ấn tượng.",
-                            qty: 1,
-                            unitPrice: price,
-                            subtotal: price
+                            id: 'event_flycam',
+                            name: "Thiết bị & Nhân sự Flycam sự kiện bổ sung",
+                            desc: "Góc quay không trung bao quát toàn cảnh sự kiện tầm cao bằng Flycam chuyên dụng. Đơn giá cố định: 2.000.000 đ / ngày (Chưa bao gồm giấy phép).",
+                            qty: eventFlycamDays,
+                            unitPrice: 2000000,
+                            subtotal: eventFlycamDays * 2000000
                         });
                     }
                 }
@@ -423,15 +584,15 @@
                         isHeader: true
                     });
 
-                    // Cấu Hình Quay Phim & Thiết Bị lẻ
+                    // Cấu Hình Quay Phim & Thiết Bị lẻ (Cập nhật đơn giá gói nửa ngày thành 2.000.000đ theo yêu cầu)
                     if (dlQuayOption === 'HALF_DAY') {
                         items.push({
                             id: 'dl_quay_phim',
                             name: "Quay Phim & Thiết Bị Lẻ (Nửa ngày)",
                             desc: "Nhân sự kỹ thuật cùng trang thiết bị quay phim tiêu chuẩn trong vòng 4 tiếng.",
                             qty: 1,
-                            unitPrice: 1500000,
-                            subtotal: 1500000
+                            unitPrice: 2000000,
+                            subtotal: 2000000
                         });
                     } else if (dlQuayOption === 'FULL_DAY') {
                         items.push({
@@ -474,8 +635,8 @@
                         const durationName = dlMauOption === 'HALF_DAY' ? "Nửa ngày" : "Nguyên ngày";
                         items.push({
                             id: 'dl_thue_mau',
-                            name: `Thuê Diễn Viên / Mẫu Lẻ (${durationName})`,
-                            desc: `Nhân sự mẫu diễn xuất thực hiện nội dung quảng cáo hoặc xây kênh thương hiệu.`,
+                            name: "Thuê Diễn Viên / Mẫu Lẻ (" + durationName + ")",
+                            desc: "Nhân sự mẫu diễn xuất thực hiện nội dung quảng cáo hoặc xây kênh thương hiệu.",
                             qty: dlMauQty,
                             unitPrice: rate,
                             subtotal: dlMauQty * rate
@@ -490,15 +651,12 @@
                     items,
                     total
                 };
-            }, [activeCategory, qcOption, qcMauQty, qcIncludeQuay, qcDungQty, qcKichBanQty, xkPackage, xkModelNoVoiceDays, xkModelVoiceDays, bdsSubCategory, bdsKichBanQty, bdsDungQty, bdsQuayDays, bdsMauDays, eventPackage, eventDuration, dlQuayOption, dlDungQty, dlKichBanQty, dlMauOption, dlMauQty]);
+            }, [activeCategory, qcOption, qcMauQty, qcIncludeQuay, qcDungQty, qcKichBanQty, xkPackage, xkModelNoVoiceDays, xkModelVoiceDays, bdsSubCategory, bdsKichBanQty, bdsDungQty, bdsQuayDays, bdsFlycamDays, bdsMauDays, eventPackage, eventDuration, eventFlycamDays, dlQuayOption, dlDungQty, dlKichBanQty, dlMauOption, dlMauQty]);
 
-            // Quản lý danh sách phần tử cuối cùng trên báo giá
+            // Quản lý danh sách phần tử cuối cùng trên báo giá - Cập nhật luôn luôn hiển thị trang trống (invoiceItems) khi vừa đổi sản phẩm
             const finalQuoteItems = useMemo(() => {
-                if (invoiceItems.length > 0) {
-                    return invoiceItems;
-                }
-                return activeCalculation.items.filter(item => !item.isHeader);
-            }, [invoiceItems, activeCalculation]);
+                return invoiceItems;
+            }, [invoiceItems]);
 
             const subtotal = useMemo(() => {
                 return finalQuoteItems.reduce((acc, item) => acc + item.subtotal, 0);
@@ -518,11 +676,16 @@
 
             // Thêm hạng mục vào danh sách tích lũy chính thức
             const handleAddToQuote = () => {
-                const itemsToAdd = activeCalculation.items.filter(item => !item.isHeader);
+                const itemsToAdd = activeCalculation.items.filter(item => !item.isHeader && item.subtotal > 0);
                 
+                if (itemsToAdd.length === 0) {
+                    // Nếu chưa chọn số lượng nào hoặc giá bằng 0, không thêm các hạng mục rỗng
+                    return;
+                }
+
                 const formattedItems = itemsToAdd.map(item => ({
                     ...item,
-                    id: `${item.id}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`
+                    id: item.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4)
                 }));
 
                 setInvoiceItems(prev => [...prev, ...formattedItems]);
@@ -530,14 +693,19 @@
 
             const handleClearQuote = () => {
                 setInvoiceItems([]);
+                setActiveMenuId(null);
             };
 
             const handleRemoveItem = (id) => {
                 setInvoiceItems(prev => prev.filter(item => item.id !== id));
+                if (activeMenuId === id) {
+                    setActiveMenuId(null);
+                }
             };
 
             // Xuất báo giá sang PDF chất lượng cao sắc nét
             const handlePrint = () => {
+                setActiveMenuId(null); // Đóng mọi menu trước khi xuất bản
                 setIsGeneratingPDF(true);
                 const element = document.getElementById('quote-paper-pdf');
                 
@@ -555,7 +723,7 @@
                 
                 const opt = {
                     margin:       10, 
-                    filename:     `BaoGia_${quoteId}_UpMedia.pdf`,
+                    filename:     "BaoGia_" + quoteId + "_UpMedia.pdf",
                     image:        { type: 'jpeg', quality: 0.98 },
                     html2canvas:  { scale: 2, useCORS: true, logging: false }, 
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' } 
@@ -572,6 +740,7 @@
 
             // Xuất báo giá sang ảnh định dạng PNG chất lượng cao
             const handleExportPNG = () => {
+                setActiveMenuId(null); // Đóng mọi menu trước khi xuất bản
                 setIsGeneratingPNG(true);
                 const element = document.getElementById('quote-paper-pdf');
                 
@@ -595,7 +764,7 @@
                     const dataUrl = canvas.toDataURL('image/png');
                     const link = document.createElement('a');
                     link.href = dataUrl;
-                    link.download = `BaoGia_${quoteId}_UpMedia.png`;
+                    link.download = "BaoGia_" + quoteId + "_UpMedia.png";
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -609,6 +778,39 @@
             return (
                 <div className="flex-grow flex flex-col md:flex-row min-h-screen relative overflow-x-hidden bg-black text-zinc-100">
                     
+                    {/* CUSTOM MODAL CONFIRMATION (Xác nhận chuyển đổi dòng sản phẩm) */}
+                    {showConfirmModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn no-print">
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+                                <div className="text-center">
+                                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-900/30 text-red-400 mb-4 border border-red-800">
+                                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-2">CẢNH BÁO THAY ĐỔI</h3>
+                                    <p className="text-xs text-zinc-300 leading-relaxed uppercase">
+                                        BÁO GIÁ TRƯỚC ĐÂY CỦA BẠN SẼ BỊ XÓA, BẠN CÓ MUỐN ĐỔI SẢN PHẨM?
+                                    </p>
+                                </div>
+                                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                                    <button 
+                                        onClick={confirmCategoryChange}
+                                        className="flex-1 bg-gradient-to-b from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase transition-all duration-75 border-b-2 border-red-800 active:border-b-0 active:translate-y-[2px]"
+                                    >
+                                        Đồng ý đổi
+                                    </button>
+                                    <button 
+                                        onClick={cancelCategoryChange}
+                                        className="flex-1 bg-zinc-850 hover:bg-zinc-800 text-zinc-300 font-medium py-2.5 px-4 rounded-lg text-xs uppercase transition-all duration-75 border border-zinc-800"
+                                    >
+                                        Hủy bỏ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* LEFT PANEL: CONFIGURATOR (Hidden during print) */}
                     <div className="w-full md:w-[45%] bg-zinc-900 p-6 md:p-8 flex flex-col border-r border-zinc-800 no-print max-h-[calc(100vh-80px)] overflow-y-auto no-scrollbar pb-32">
                         
@@ -630,7 +832,7 @@
                             </h3>
                             <div className="grid grid-cols-1 gap-3 text-sm">
                                 <div>
-                                    <label className="block text-xs text-zinc-400 mb-1">Tên Đơn vị / Đối tác</label>
+                                    <label className="block text-xs text-zinc-400 mb-1">Tên Đơn vị / Đối tác / Khách hàng</label>
                                     <input 
                                         type="text" 
                                         value={clientName} 
@@ -668,36 +870,11 @@
                                 Dòng Sản Phẩm Cấu Hình
                             </label>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                <button 
-                                    onClick={() => setActiveCategory('QUANG_CAO')} 
-                                    className={getTabClass('QUANG_CAO')}
-                                >
-                                    QUẢNG CÁO
-                                </button>
-                                <button 
-                                    onClick={() => setActiveCategory('XAY_KENH')} 
-                                    className={getTabClass('XAY_KENH')}
-                                >
-                                    XÂY KÊNH
-                                </button>
-                                <button 
-                                    onClick={() => setActiveCategory('QUAY_BDS')} 
-                                    className={getTabClass('QUAY_BDS')}
-                                >
-                                    QUAY BDS
-                                </button>
-                                <button 
-                                    onClick={() => setActiveCategory('EVENT')} 
-                                    className={getTabClass('EVENT')}
-                                >
-                                    EVENT
-                                </button>
-                                <button 
-                                    onClick={() => setActiveCategory('DICH_VU_LE')} 
-                                    className={getDichVuLeTabClass()}
-                                >
-                                    DỊCH VỤ LẺ
-                                </button>
+                                <button onClick={() => handleCategoryClick('QUANG_CAO')} className={getTabClass('QUANG_CAO')}>QUẢNG CÁO</button>
+                                <button onClick={() => handleCategoryClick('XAY_KENH')} className={getTabClass('XAY_KENH')}>XÂY KÊNH</button>
+                                <button onClick={() => handleCategoryClick('QUAY_BDS')} className={getTabClass('QUAY_BDS')}>QUAY BDS</button>
+                                <button onClick={() => handleCategoryClick('EVENT')} className={getTabClass('EVENT')}>EVENT</button>
+                                <button onClick={() => handleCategoryClick('DICH_VU_LE')} className={getDichVuLeTabClass()}>DỊCH VỤ LẺ</button>
                             </div>
                         </div>
 
@@ -706,7 +883,7 @@
                             
                             {/* ACTIVE TAB SUMMARY */}
                             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                                <h2 className="text-sm font-bold font-montserrat text-white flex items-center gap-2">
+                                <h2 className="text-sm font-bold font-montserrat text-white">
                                     Cấu Hình: {activeCategory === 'DICH_VU_LE' ? 'DỊCH VỤ LẺ' : activeCategory.replace('_', ' ')}
                                 </h2>
                                 <span className="text-xs bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded font-medium border border-zinc-700">
@@ -717,81 +894,58 @@
                             {/* CATEGORY 1: QUẢNG CÁO */}
                             {activeCategory === 'QUANG_CAO' && (
                                 <div className="space-y-4 animate-fadeIn">
-                                    {/* Sub option Selection */}
                                     <div>
                                         <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Lựa chọn quy mô số lượng clip quảng cáo</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <button 
-                                                onClick={() => { setQcOption('1_2_CLIPS'); }} 
-                                                className={getSubOptionClass(qcOption === '1_2_CLIPS')}
-                                            >
-                                                Mẫu 1-2 clips (Cơ bản)
-                                            </button>
-                                            <button 
-                                                onClick={() => { setQcOption('3_5_CLIPS'); }} 
-                                                className={getSubOptionClass(qcOption === '3_5_CLIPS')}
-                                            >
-                                                Mẫu 3-5 clips (Tối ưu)
-                                            </button>
+                                            <button onClick={() => setQcOption('1_2_CLIPS')} className={getSubOptionClass(qcOption === '1_2_CLIPS')}>Mẫu 1-2 clips (Cơ bản)</button>
+                                            <button onClick={() => setQcOption('3_5_CLIPS')} className={getSubOptionClass(qcOption === '3_5_CLIPS')}>Mẫu 3-5 clips (Tối ưu)</button>
                                         </div>
                                     </div>
 
-                                    {/* Checkboxes and numeric inputs */}
                                     <div className="space-y-3 bg-zinc-800 p-4 rounded-xl border border-zinc-800">
-                                        
-                                        {/* Actor / Model quantity selector */}
                                         <div className="flex items-center justify-between py-2 border-b border-zinc-800">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Số lượng Diễn Viên / Mẫu</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá: {qcOption === '1_2_CLIPS' ? '1.500.000 đ' : '2.500.000 đ'} / người</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setQcMauQty(Math.max(0, qcMauQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setQcMauQty(Math.max(0, qcMauQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={qcMauQty} onChange={(e) => setQcMauQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setQcMauQty(qcMauQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setQcMauQty(qcMauQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
 
-                                        {/* Filming Day / Session */}
                                         <div className="flex items-center justify-between py-2 border-b border-zinc-800">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Bao gồm Quay Phim & Thiết bị</span>
                                                 <span className="text-[10px] text-zinc-400">{qcOption === '1_2_CLIPS' ? 'Chi phí cố định: 1.500.000 đ' : 'Chi phí cố định: 3.000.000 đ'}</span>
                                             </div>
-                                            <input 
-                                                type="checkbox" 
-                                                checked={qcIncludeQuay} 
-                                                onChange={(e) => setQcIncludeQuay(e.target.checked)}
-                                                className="w-4 h-4 text-zinc-950 bg-zinc-900 border border-zinc-700 rounded focus:ring-zinc-400 cursor-pointer"
-                                            />
+                                            <input type="checkbox" checked={qcIncludeQuay} onChange={(e) => setQcIncludeQuay(e.target.checked)} className="w-4 h-4 text-zinc-950 bg-zinc-900 border border-zinc-700 rounded focus:ring-zinc-400 cursor-pointer" />
                                         </div>
 
-                                        {/* Editing Quantity (Input) */}
                                         <div className="flex items-center justify-between py-2 border-b border-zinc-800">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Số lượng clip dựng</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá: 300.000 đ / clip</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setQcDungQty(Math.max(0, qcDungQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setQcDungQty(Math.max(0, qcDungQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={qcDungQty} onChange={(e) => setQcDungQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setQcDungQty(qcDungQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setQcDungQty(qcDungQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
 
-                                        {/* Script Quantity (Input) */}
                                         <div className="flex items-center justify-between py-2">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Số lượng kịch bản chuẩn bị</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá: 200.000 đ / kịch bản</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setQcKichBanQty(Math.max(0, qcKichBanQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setQcKichBanQty(Math.max(0, qcKichBanQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={qcKichBanQty} onChange={(e) => setQcKichBanQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setQcKichBanQty(qcKichBanQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setQcKichBanQty(qcKichBanQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
-
                                     </div>
                                 </div>
                             )}
@@ -800,14 +954,8 @@
                             {activeCategory === 'XAY_KENH' && (
                                 <div className="space-y-4 animate-fadeIn">
                                     <label className="block text-xs font-semibold text-zinc-300 uppercase">Lựa chọn gói dịch vụ xây kênh tháng</label>
-                                    
-                                    {/* 4 packages selection */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {/* Gói Thường 20 */}
-                                        <div 
-                                            onClick={() => setXkPackage('THUONG_20')}
-                                            className={getXkPackageClass('THUONG_20')}
-                                        >
+                                        <div onClick={() => setXkPackage('THUONG_20')} className={getXkPackageClass('THUONG_20')}>
                                             <div>
                                                 <div className="flex justify-between items-start mb-1">
                                                     <span className="text-xs font-bold uppercase tracking-wider text-zinc-100">Gói Thường</span>
@@ -816,16 +964,11 @@
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony | Chuẩn 4K / 30 FPS (8 bit). Đã bao gồm kịch bản, quay và dựng.</p>
                                             </div>
                                             <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
-                                                <span>Chi phí trọn gói:</span>
-                                                <span>15.000.000 đ</span>
+                                                <span>Chi phí trọn gói:</span><span>15.000.000 đ</span>
                                             </div>
                                         </div>
 
-                                        {/* Gói Thường 30 */}
-                                        <div 
-                                            onClick={() => setXkPackage('THUONG_30')}
-                                            className={getXkPackageClass('THUONG_30')}
-                                        >
+                                        <div onClick={() => setXkPackage('THUONG_30')} className={getXkPackageClass('THUONG_30')}>
                                             <div>
                                                 <div className="flex justify-between items-start mb-1">
                                                     <span className="text-xs font-bold uppercase tracking-wider text-zinc-100">Gói Thường</span>
@@ -834,16 +977,11 @@
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony | Chuẩn 4K / 30 FPS (8 bit). Tối ưu hóa tần suất phủ sóng liên tục.</p>
                                             </div>
                                             <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
-                                                <span>Chi phí trọn gói:</span>
-                                                <span>21.000.000 đ</span>
+                                                <span>Chi phí trọn gói:</span><span>21.000.000 đ</span>
                                             </div>
                                         </div>
 
-                                        {/* Gói Cao Cấp 20 */}
-                                        <div 
-                                            onClick={() => setXkPackage('CAOCAP_20')}
-                                            className={getXkPackageClass('CAOCAP_20')}
-                                        >
+                                        <div onClick={() => setXkPackage('CAOCAP_20')} className={getXkPackageClass('CAOCAP_20')}>
                                             <div>
                                                 <div className="flex justify-between items-start mb-1">
                                                     <span className="text-xs font-bold uppercase tracking-wider text-zinc-100">Gói Cao Cấp</span>
@@ -852,16 +990,11 @@
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony Đời Mới | 4K / 60 FPS (10 bit 4:2:2). Màu sắc chuẩn điện ảnh, tối ưu chi tiết hậu kỳ tốt hơn.</p>
                                             </div>
                                             <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
-                                                <span>Chi phí trọn gói:</span>
-                                                <span>18.000.000 đ</span>
+                                                <span>Chi phí trọn gói:</span><span>18.000.000 đ</span>
                                             </div>
                                         </div>
 
-                                        {/* Gói Cao Cấp 30 */}
-                                        <div 
-                                            onClick={() => setXkPackage('CAOCAP_30')}
-                                            className={getXkPackageClass('CAOCAP_30')}
-                                        >
+                                        <div onClick={() => setXkPackage('CAOCAP_30')} className={getXkPackageClass('CAOCAP_30')}>
                                             <div>
                                                 <div className="flex justify-between items-start mb-1">
                                                     <span className="text-xs font-bold uppercase tracking-wider text-zinc-100">Gói Cao Cấp</span>
@@ -870,39 +1003,34 @@
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Đảm bảo tần suất dày đặc lẫn chất lượng hình ảnh thẩm mỹ đỉnh cao.</p>
                                             </div>
                                             <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
-                                                <span>Chi phí trọn gói:</span>
-                                                <span>26.000.000 đ</span>
+                                                <span>Chi phí trọn gói:</span><span>26.000.000 đ</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Additional Service Models */}
                                     <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-800 space-y-3.5 mt-2">
                                         <h4 className="text-xs font-semibold text-zinc-300 tracking-wider uppercase">Dịch vụ Nhân sự mẫu đi kèm (Tùy Chọn)</h4>
-                                        
-                                        {/* Model không thoại */}
                                         <div className="flex items-center justify-between py-1.5 border-b border-zinc-700">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Model Không Thoại</span>
                                                 <span className="text-[10px] text-zinc-400">Diễn xuất body, spa, minh họa... | 1.5tr/ngày</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setXkModelNoVoiceDays(Math.max(0, xkModelNoVoiceDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setXkModelNoVoiceDays(Math.max(0, xkModelNoVoiceDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={xkModelNoVoiceDays} onChange={(e) => setXkModelNoVoiceDays(parseInt(e.target.value) || 0)} className="w-10 bg-black border border-zinc-800 text-center rounded text-xs text-white p-0.5" />
-                                                <button onClick={() => setXkModelNoVoiceDays(xkModelNoVoiceDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setXkModelNoVoiceDays(xkModelNoVoiceDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
 
-                                        {/* Model MC thoại tốt */}
                                         <div className="flex items-center justify-between py-1.5">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Model MC Thoại Tốt</span>
                                                 <span className="text-[10px] text-zinc-400">Dẫn kênh, lưu loát, ngoại hình sáng | 2.5tr/ngày</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setXkModelVoiceDays(Math.max(0, xkModelVoiceDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setXkModelVoiceDays(Math.max(0, xkModelVoiceDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={xkModelVoiceDays} onChange={(e) => setXkModelVoiceDays(parseInt(e.target.value) || 0)} className="w-10 bg-black border border-zinc-800 text-center rounded text-xs text-white p-0.5" />
-                                                <button onClick={() => setXkModelVoiceDays(xkModelVoiceDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setXkModelVoiceDays(xkModelVoiceDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
                                     </div>
@@ -912,76 +1040,72 @@
                             {/* CATEGORY 3: QUAY BDS */}
                             {activeCategory === 'QUAY_BDS' && (
                                 <div className="space-y-4 animate-fadeIn">
-                                    {/* BDS Sub Category Selection */}
                                     <div>
                                         <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Lựa chọn hình thức quay Bất Động Sản</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <button 
-                                                onClick={() => setBdsSubCategory('QC_BDS')} 
-                                                className={getSubOptionClass(bdsSubCategory === 'QC_BDS')}
-                                            >
-                                                Quảng Cáo Bất Động Sản
-                                            </button>
-                                            <button 
-                                                onClick={() => setBdsSubCategory('XK_BDS')} 
-                                                className={getSubOptionClass(bdsSubCategory === 'XK_BDS')}
-                                            >
-                                                Xây Kênh Bất Động Sản
-                                            </button>
+                                            <button onClick={() => setBdsSubCategory('QC_BDS')} className={getSubOptionClass(bdsSubCategory === 'QC_BDS')}>Quảng Cáo Bất Động Sản</button>
+                                            <button onClick={() => setBdsSubCategory('XK_BDS')} className={getSubOptionClass(bdsSubCategory === 'XK_BDS')}>Xây Kênh Bất Động Sản</button>
                                         </div>
                                     </div>
 
-                                    {/* BDS numeric inputs for items */}
                                     <div className="space-y-3.5 bg-zinc-800 p-4 rounded-xl border border-zinc-800">
-                                        {/* Kịch bản */}
                                         <div className="flex items-center justify-between py-1.5 border-b border-zinc-700">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Số lượng kịch bản</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá: {bdsSubCategory === 'QC_BDS' ? '350.000 đ' : '250.000 đ'} / kịch bản</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setBdsKichBanQty(Math.max(0, bdsKichBanQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setBdsKichBanQty(Math.max(0, bdsKichBanQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={bdsKichBanQty} onChange={(e) => setBdsKichBanQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setBdsKichBanQty(bdsKichBanQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setBdsKichBanQty(bdsKichBanQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
 
-                                        {/* Dựng clip */}
                                         <div className="flex items-center justify-between py-1.5 border-b border-zinc-700">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Số lượng clip dựng hoàn thiện</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá cố định: 300.000 đ / clip</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setBdsDungQty(Math.max(0, bdsDungQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setBdsDungQty(Math.max(0, bdsDungQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={bdsDungQty} onChange={(e) => setBdsDungQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setBdsDungQty(bdsDungQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setBdsDungQty(bdsDungQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
 
-                                        {/* Ngày quay */}
                                         <div className="flex items-center justify-between py-1.5 border-b border-zinc-700">
                                             <div>
-                                                <span className="block text-xs font-medium text-white">Số ngày quay thực tế</span>
-                                                <span className="text-[10px] text-zinc-400">Đơn giá: 3.000.000 đ / ngày (bao gồm máy quay + Flycam)</span>
+                                                <span className="block text-xs font-medium text-white">Quay lấy source không bao gồm flycam</span>
+                                                <span className="text-[10px] text-zinc-400">Hệ thống máy Mirrorless cầm tay mặt đất bám sát bối cảnh. Đơn giá: 3.000.000 đ / ngày</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setBdsQuayDays(Math.max(0, bdsQuayDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setBdsQuayDays(Math.max(0, bdsQuayDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={bdsQuayDays} onChange={(e) => setBdsQuayDays(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setBdsQuayDays(bdsQuayDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setBdsQuayDays(bdsQuayDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
 
-                                        {/* Ngày thuê mẫu */}
+                                        <div className="flex items-center justify-between py-1.5 border-b border-zinc-700">
+                                            <div>
+                                                <span className="block text-xs font-medium text-white">Bổ sung gói thiết bị Flycam lẻ</span>
+                                                <span className="text-[10px] text-zinc-400">Góc toàn cảnh không trung dự án tầm cao. Đơn giá cố định: 2.000.000 đ / ngày (Chưa gồm giấy phép)</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => setBdsFlycamDays(Math.max(0, bdsFlycamDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
+                                                <input type="number" min="0" value={bdsFlycamDays} onChange={(e) => setBdsFlycamDays(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
+                                                <button onClick={() => setBdsFlycamDays(bdsFlycamDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
+                                            </div>
+                                        </div>
+
                                         <div className="flex items-center justify-between py-1.5">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Số ngày thuê nhân sự mẫu</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá: 2.500.000 đ / ngày</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setBdsMauDays(Math.max(0, bdsMauDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setBdsMauDays(Math.max(0, bdsMauDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={bdsMauDays} onChange={(e) => setBdsMauDays(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setBdsMauDays(bdsMauDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setBdsMauDays(bdsMauDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
                                     </div>
@@ -991,49 +1115,54 @@
                             {/* CATEGORY 4: EVENT */}
                             {activeCategory === 'EVENT' && (
                                 <div className="space-y-4 animate-fadeIn">
-                                    {/* Packages Select */}
                                     <div>
                                         <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Lựa chọn gói quay chụp</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button 
-                                                onClick={() => setEventPackage('GOI_1')} 
-                                                className={getEventPackageClass('GOI_1')}
-                                            >
-                                                <span className="block text-zinc-300 text-[10px] tracking-wider uppercase mb-1 font-bold">Gói 1: Quay 1 Chụp</span>
-                                                <span className="text-xs text-zinc-400">Bản tiêu chuẩn (5tr - 8tr)</span>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {/* Gói 1 cũ đổi tên thành Gói Cơ Bản */}
+                                            <button onClick={() => setEventPackage('GOI_1')} className={getEventPackageClass('GOI_1')}>
+                                                <span className="block text-zinc-300 text-[11px] tracking-wider uppercase mb-1 font-bold">Gói Cơ Bản (1 quay 1 chụp)</span>
+                                                <span className="text-[11px] text-zinc-400">Tiêu chuẩn (5tr - 8tr) | Không Flycam</span>
                                             </button>
-                                            <button 
-                                                onClick={() => setEventPackage('GOI_2')} 
-                                                className={getEventPackageClass('GOI_2')}
-                                            >
-                                                <span className="block text-zinc-300 text-[10px] tracking-wider uppercase mb-1 font-bold">Gói 2: Quay 1 Chụp</span>
-                                                <span className="text-xs text-zinc-400">Flycam / Premium (8tr - 12tr)</span>
+                                            {/* Gói 2 cũ đổi tên thành Gói Cao Cấp */}
+                                            <button onClick={() => setEventPackage('GOI_2')} className={getEventPackageClass('GOI_2')}>
+                                                <span className="block text-zinc-300 text-[11px] tracking-wider uppercase mb-1 font-bold">Gói Cao Cấp (2 quay 1 chụp)</span>
+                                                <span className="text-[11px] text-zinc-400">Cao cấp (8tr - 12tr) | Không Flycam</span>
                                             </button>
                                         </div>
                                     </div>
 
-                                    {/* Duration Choice (Half / Full) */}
+                                    {/* Tùy chọn thời gian thực hiện sự kiện */}
                                     <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-800">
                                         <label className="block text-xs font-semibold text-zinc-300 mb-3 uppercase">Thời gian thực hiện sự kiện</label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <button 
-                                                onClick={() => setEventDuration('HALF_DAY')} 
-                                                className={getSubOptionClass(eventDuration === 'HALF_DAY')}
-                                            >
+                                            <button onClick={() => setEventDuration('HALF_DAY')} className={getSubOptionClass(eventDuration === 'HALF_DAY')}>
                                                 Nửa ngày (Dưới 4 tiếng)
                                                 <span className="block text-[9px] font-normal text-zinc-500 mt-1">
                                                     {eventPackage === 'GOI_1' ? 'Giá: 5.000.000 đ' : 'Giá: 8.000.000 đ'}
                                                 </span>
                                             </button>
-                                            <button 
-                                                onClick={() => { setEventDuration('FULL_DAY'); }} 
-                                                className={getSubOptionClass(eventDuration === 'FULL_DAY')}
-                                            >
+                                            <button onClick={() => setEventDuration('FULL_DAY')} className={getSubOptionClass(eventDuration === 'FULL_DAY')}>
                                                 Nguyên ngày (Lên tới 8 tiếng)
                                                 <span className="block text-[9px] font-normal text-zinc-500 mt-1">
                                                     {eventPackage === 'GOI_1' ? 'Giá: 8.000.000 đ' : 'Giá: 12.000.000 đ'}
                                                 </span>
                                             </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Bổ sung mục Flycam lẻ 2 triệu theo yêu cầu */}
+                                    <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-850 space-y-3.5 mt-2">
+                                        <h4 className="text-xs font-semibold text-zinc-300 tracking-wider uppercase">Dịch vụ bổ sung đi kèm (Tùy Chọn)</h4>
+                                        <div className="flex items-center justify-between py-1.5">
+                                            <div>
+                                                <span className="block text-xs font-medium text-white">Thiết bị & Nhân sự Flycam sự kiện</span>
+                                                <span className="text-[10px] text-zinc-400">Góc toàn cảnh không trung sự kiện | 2.000.000 đ / ngày (Chưa gồm giấy phép)</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => setEventFlycamDays(Math.max(0, eventFlycamDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
+                                                <input type="number" min="0" value={eventFlycamDays} onChange={(e) => setEventFlycamDays(parseInt(e.target.value) || 0)} className="w-10 bg-black border border-zinc-800 text-center rounded text-xs text-white p-0.5" />
+                                                <button onClick={() => setEventFlycamDays(eventFlycamDays + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1042,95 +1171,60 @@
                             {/* CATEGORY 5: DỊCH VỤ LẺ */}
                             {activeCategory === 'DICH_VU_LE' && (
                                 <div className="space-y-4 animate-fadeIn">
-                                    
-                                    {/* Cấu Hình Quay Phim & Thiết Bị */}
                                     <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700">
                                         <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Quay Phim & Thiết Bị Lẻ</label>
                                         <div className="grid grid-cols-3 gap-2">
-                                            <button 
-                                                onClick={() => setDlQuayOption('NONE')} 
-                                                className={getDlQuayOptionClass('NONE')}
-                                            >
-                                                Không Chọn
-                                            </button>
-                                            <button 
-                                                onClick={() => setDlQuayOption('HALF_DAY')} 
-                                                className={getDlQuayOptionClass('HALF_DAY')}
-                                            >
-                                                Nửa ngày (1.5tr)
-                                            </button>
-                                            <button 
-                                                onClick={() => setDlQuayOption('FULL_DAY')} 
-                                                className={getDlQuayOptionClass('FULL_DAY')}
-                                            >
-                                                Nguyên ngày (3tr)
-                                            </button>
+                                            <button onClick={() => setDlQuayOption('NONE')} className={getDlQuayOptionClass('NONE')}>Không Chọn</button>
+                                            <button onClick={() => setDlQuayOption('HALF_DAY')} className={getDlQuayOptionClass('HALF_DAY')}>Nửa ngày (2tr)</button>
+                                            <button onClick={() => setDlQuayOption('FULL_DAY')} className={getDlQuayOptionClass('FULL_DAY')}>Nguyên ngày (3tr)</button>
                                         </div>
                                     </div>
 
-                                    {/* Cấu Hình Dựng Clip & Kịch Bản lẻ */}
                                     <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 space-y-3">
-                                        {/* Dựng clip */}
                                         <div className="flex items-center justify-between py-1.5 border-b border-zinc-700">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Dựng Clip Lẻ</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá: 300.000 đ / clip</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setDlDungQty(Math.max(0, dlDungQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setDlDungQty(Math.max(0, dlDungQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={dlDungQty} onChange={(e) => setDlDungQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setDlDungQty(dlDungQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setDlDungQty(dlDungQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
 
-                                        {/* Kịch bản */}
                                         <div className="flex items-center justify-between py-1.5">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Kịch Bản Phân Cảnh</span>
                                                 <span className="text-[10px] text-zinc-400">Đơn giá: 200.000 đ / kịch bản</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setDlKichBanQty(Math.max(0, dlKichBanQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setDlKichBanQty(Math.max(0, dlKichBanQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={dlKichBanQty} onChange={(e) => setDlKichBanQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setDlKichBanQty(dlKichBanQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setDlKichBanQty(dlKichBanQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Cấu Hình Thuê Mẫu lẻ */}
                                     <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 space-y-3">
                                         <label className="block text-xs font-semibold text-zinc-300 uppercase">Thuê Diễn Viên / Mẫu Lẻ</label>
-                                        
-                                        {/* Chọn ca thuê */}
                                         <div className="grid grid-cols-2 gap-2 mb-2">
-                                            <button 
-                                                onClick={() => setDlMauOption('HALF_DAY')} 
-                                                className={getDlMauOptionClass('HALF_DAY')}
-                                            >
-                                                Nửa ngày (1.5tr)
-                                            </button>
-                                            <button 
-                                                onClick={() => setDlMauOption('FULL_DAY')} 
-                                                className={getDlMauOptionClass('FULL_DAY')}
-                                            >
-                                                Nguyên ngày (2.5tr)
-                                            </button>
+                                            <button onClick={() => setDlMauOption('HALF_DAY')} className={getDlMauOptionClass('HALF_DAY')}>Nửa ngày (1.5tr)</button>
+                                            <button onClick={() => setDlMauOption('FULL_DAY')} className={getDlMauOptionClass('FULL_DAY')}>Nguyên ngày (2.5tr)</button>
                                         </div>
 
-                                        {/* Nhập số lượng mẫu thực tế để nhân lên */}
                                         <div className="flex items-center justify-between pt-1 border-t border-zinc-700">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Số lượng mẫu thực tế</span>
                                                 <span className="text-[10px] text-zinc-400">Được nhân trực tiếp với đơn giá ca</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setDlMauQty(Math.max(0, dlMauQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">-</button>
+                                                <button onClick={() => setDlMauQty(Math.max(0, dlMauQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
                                                 <input type="number" min="0" value={dlMauQty} onChange={(e) => setDlMauQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setDlMauQty(dlMauQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold transition-all duration-75">+</button>
+                                                <button onClick={() => setDlMauQty(dlMauQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
                                     </div>
-
                                 </div>
                             )}
 
@@ -1138,74 +1232,39 @@
 
                         {/* ADD & RESET INTERACTIVE ACTIONS */}
                         <div className="mt-8 pt-6 border-t border-zinc-800 flex flex-col sm:flex-row gap-3">
-                            <button 
-                                onClick={handleAddToQuote}
-                                className="flex-1 bg-gradient-to-b from-zinc-100 to-zinc-300 text-zinc-950 border-b-4 border-zinc-500 active:border-b-0 active:translate-y-[4px] hover:brightness-110 text-xs font-bold py-3.5 px-4 rounded-lg transition-all duration-75 flex items-center justify-center gap-2 shadow-md shadow-black/40 uppercase tracking-wider"
-                            >
-                                THÊM VÀO BÁO GIÁ PHÍA DƯỚI
-                            </button>
+                            <button onClick={handleAddToQuote} className="flex-1 bg-gradient-to-b from-zinc-100 to-zinc-300 text-zinc-950 border-b-4 border-zinc-500 active:border-b-0 active:translate-y-[4px] hover:brightness-110 text-xs font-bold py-3.5 px-4 rounded-lg transition-all duration-75 flex items-center justify-center gap-2 shadow-md shadow-black/40 uppercase tracking-wider animate-gentle-pulse">THÊM VÀO BÁO GIÁ PHÍA DƯỚI</button>
                             {invoiceItems.length > 0 && (
-                                <button 
-                                    onClick={handleClearQuote}
-                                    className="bg-gradient-to-b from-zinc-700 to-zinc-800 text-zinc-200 border-b-4 border-zinc-900 active:border-b-0 active:translate-y-[4px] hover:brightness-110 text-xs font-bold py-3.5 px-4 rounded-lg transition-all duration-75 flex items-center justify-center gap-2 shadow-md shadow-black/40 uppercase tracking-wider"
-                                >
-                                    XÓA TẤT CẢ
-                                </button>
+                                <button onClick={handleClearQuote} className="bg-gradient-to-b from-zinc-700 to-zinc-800 text-zinc-200 border-b-4 border-zinc-900 active:border-b-0 active:translate-y-[4px] hover:brightness-110 text-xs font-bold py-3.5 px-4 rounded-lg transition-all duration-75 flex items-center justify-center gap-2 shadow-md shadow-black/40 uppercase tracking-wider">XÓA TẤT CẢ</button>
                             )}
                         </div>
 
                         {/* Cấu hình chiết khấu, thuế, ghi chú, ẩn hiện tổng tiền */}
                         <div className="mt-6 bg-zinc-800 p-4 rounded-xl border border-zinc-800 space-y-3">
                             <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider border-b border-zinc-700 pb-2">Cấu hình chiết khấu & VAT (Toàn hóa đơn)</h4>
-                            
-                            {/* Nút tùy chọn hiển thị tổng tiền */}
                             <div className="flex items-center justify-between py-2 border-b border-zinc-900 pb-2">
                                 <div>
                                     <span className="block text-xs font-medium text-white">Hiển thị Tổng Thanh Toán</span>
                                     <span className="text-[10px] text-zinc-400">Ẩn hoặc hiện bảng thống kê tổng tiền ở bản xuất PDF/PNG</span>
                                 </div>
-                                <input 
-                                    type="checkbox" 
-                                    checked={showTotal} 
-                                    onChange={(e) => setShowTotal(e.target.checked)}
-                                    className="w-4 h-4 text-zinc-950 bg-zinc-900 border border-zinc-700 rounded focus:ring-zinc-400 cursor-pointer"
-                                />
+                                <input type="checkbox" checked={showTotal} onChange={(e) => setShowTotal(e.target.checked)} className="w-4 h-4 text-zinc-950 bg-zinc-900 border border-zinc-700 rounded focus:ring-zinc-400 cursor-pointer" />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-[10px] text-zinc-400 mb-1">Giảm giá (%)</label>
-                                    <input 
-                                        type="number" 
-                                        min="0" 
-                                        max="100"
-                                        value={discountPercent} 
-                                        onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                                        className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white" 
-                                    />
+                                    <input type="number" min="0" max="100" value={discountPercent} onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))} className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white" />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] text-zinc-400 mb-1">Thuế VAT (%)</label>
-                                    <select 
-                                        value={vatPercent} 
-                                        onChange={(e) => setVatPercent(parseInt(e.target.value))}
-                                        className="w-full bg-black border border-zinc-800 rounded px-2 py-1.5 text-xs text-white"
-                                    >
-                                        <option value="0">0% VAT</option>
-                                        <option value="8">8% VAT</option>
-                                        <option value="10">10% VAT</option>
+                                    <select value={vatPercent} onChange={(e) => setVatPercent(parseInt(e.target.value))} className="w-full bg-black border border-zinc-800 rounded px-2 py-1.5 text-xs text-white">
+                                        <option value="0">Không có (0%)</option>
+                                        <option value="8">VAT 8%</option>
                                     </select>
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-[10px] text-zinc-400 mb-1">Ghi chú chân trang báo giá</label>
-                                <textarea 
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                    rows="2"
-                                    className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-zinc-400"
-                                    placeholder="Nội dung điều khoản, bàn giao..."
-                                ></textarea>
+                                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows="2" className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-zinc-400" placeholder="Nội dung điều khoản, bàn giao..."></textarea>
                             </div>
                         </div>
 
@@ -1223,9 +1282,7 @@
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="bg-slate-900 text-white font-bold p-1 rounded-sm text-xs tracking-widest font-montserrat">UP</span>
-                                            <h2 className="text-xl font-black font-montserrat tracking-tight text-slate-900 uppercase">
-                                                {providerName}
-                                            </h2>
+                                            <h2 className="text-xl font-black font-montserrat tracking-tight text-slate-900 uppercase">{providerName}</h2>
                                         </div>
                                         <p className="text-xs text-slate-500 font-semibold mb-1">Dịch vụ quay dựng video quảng cáo, xây kênh & sự kiện chuyên nghiệp</p>
                                     </div>
@@ -1238,15 +1295,25 @@
 
                                 {/* Information of client */}
                                 <div className="bg-slate-50 rounded-lg p-4 mb-6 border border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                                    <div>
-                                        <h4 className="font-bold text-slate-800 uppercase mb-1.5 tracking-wider border-b border-slate-200 pb-1">KÍNH GỬI QUÝ KHÁCH</h4>
-                                        <p className="text-slate-900 font-semibold mb-1">{clientName}</p>
-                                        <p className="text-slate-600"><strong>Người tiếp nhận:</strong> {clientContact}</p>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <strong className="text-slate-500 block text-[10px] uppercase tracking-wider mb-0.5">TÊN ĐƠN VỊ / ĐỐI TÁC / KHÁCH HÀNG</strong>
+                                            <p className="text-slate-900 font-semibold min-h-[1.25rem]">{clientName || ""}</p>
+                                        </div>
+                                        <div>
+                                            <strong className="text-slate-500 block text-[10px] uppercase tracking-wider mb-0.5">NGƯỜI ĐẠI DIỆN</strong>
+                                            <p className="text-slate-800 font-medium min-h-[1.25rem]">{clientContact || ""}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-slate-800 uppercase mb-1.5 tracking-wider border-b border-slate-200 pb-1">THÔNG TIN CHƯƠNG TRÌNH</h4>
-                                        <p className="text-slate-900"><strong>Dự án:</strong> <span className="font-semibold text-indigo-700">{projectName}</span></p>
-                                        <p className="text-slate-600"><strong>Nội dung:</strong> Quay phim & Hậu kỳ video chuyên nghiệp thương hiệu.</p>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <strong className="text-slate-500 block text-[10px] uppercase tracking-wider mb-0.5">TÊN DỰ ÁN</strong>
+                                            <p className="text-indigo-700 font-bold min-h-[1.25rem]">{projectName || ""}</p>
+                                        </div>
+                                        <div>
+                                            <strong className="text-slate-500 block text-[10px] uppercase tracking-wider mb-0.5">NỘI DUNG DỊCH VỤ</strong>
+                                            <p className="text-slate-600">Quay phim & Hậu kỳ video chuyên nghiệp thương hiệu.</p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1268,12 +1335,20 @@
                                                     <td colSpan="5" className="py-12 text-center text-slate-400 italic">
                                                         Chưa có dịch vụ nào được cấu hình chính thức. 
                                                         <br />
-                                                        <span className="text-[11px] text-slate-500 not-italic">Vui lòng thiết lập cấu hình ở bảng bên trái rồi chọn "Thêm vào báo giá" hoặc cấu hình sẽ tự động hiển thị trực quan ở đây.</span>
+                                                        <span className="text-[11px] text-slate-500 not-italic">Vui lòng thiết lập cấu hình ở bảng bên trái rồi chọn "Thêm vào báo giá" để hiển thị dịch vụ trên tờ báo giá.</span>
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 finalQuoteItems.map((item, idx) => (
-                                                    <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                                    <tr 
+                                                        key={item.id} 
+                                                        onClick={() => {
+                                                            if (invoiceItems.length > 0) {
+                                                                setActiveMenuId(activeMenuId === item.id ? null : item.id);
+                                                            }
+                                                        }}
+                                                        className={"border-b border-slate-100 hover:bg-slate-50 transition " + (invoiceItems.length > 0 ? "cursor-pointer" : "")}
+                                                    >
                                                         <td className="py-3.5 px-3 font-semibold text-slate-400 w-8">{idx + 1}</td>
                                                         <td className="py-3.5 px-3">
                                                             <div className="font-semibold text-slate-900">{item.name}</div>
@@ -1284,17 +1359,35 @@
                                                         <td className="py-3.5 px-3 text-right font-medium text-slate-800">
                                                             {item.unitPrice > 0 ? formatVND(item.unitPrice) : "-"}
                                                         </td>
-                                                        <td className="py-3.5 px-3 text-right font-bold text-slate-950">
+                                                        <td className="py-3.5 px-3 text-right font-bold text-slate-950 relative">
                                                             {formatVND(item.subtotal)}
-                                                            {/* Nút xóa nhanh hạng mục công việc lẻ chỉ có trên giao diện quản trị */}
-                                                            {invoiceItems.length > 0 && (
-                                                                <button 
-                                                                    onClick={() => handleRemoveItem(item.id)}
-                                                                    className="ml-2 text-red-500 hover:text-red-700 no-print font-bold"
-                                                                    title="Xóa hạng mục này"
+                                                            
+                                                            {/* Menu ẩn hành động thông minh (no-print) */}
+                                                            {invoiceItems.length > 0 && activeMenuId === item.id && (
+                                                                <div 
+                                                                    className="absolute top-1/2 -translate-y-1/2 bg-slate-900 text-white border border-slate-700 rounded-lg shadow-xl py-1.5 px-3 z-50 flex items-center gap-2 no-print animate-fadeIn" 
+                                                                    style={{ right: '100%', marginRight: '8px' }}
                                                                 >
-                                                                    {"×"}
-                                                                </button>
+                                                                    <span className="text-[10px] font-semibold text-slate-300 whitespace-nowrap">Tùy chọn:</span>
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleRemoveItem(item.id);
+                                                                        }}
+                                                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2.5 rounded text-[10px] uppercase transition-all duration-75 whitespace-nowrap"
+                                                                    >
+                                                                        Xóa
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setActiveMenuId(null);
+                                                                        }}
+                                                                        className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-1 px-2 rounded text-[10px] transition-all duration-75 whitespace-nowrap"
+                                                                    >
+                                                                        Đóng
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </td>
                                                     </tr>
@@ -1336,12 +1429,8 @@
                             {/* Terms */}
                             <div className="mt-10 border-t border-slate-100 pt-6">
                                 <div className="mb-2">
-                                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">
-                                        ĐIỀU KHOẢN CHUNG & GHI CHÚ
-                                    </h4>
-                                    <p className="text-[10px] text-slate-500 italic leading-relaxed">
-                                        {note || "Không có ghi chú thêm."}
-                                    </p>
+                                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">ĐIỀU KHOẢN CHUNG & GHI CHÚ</h4>
+                                    <p className="text-[10px] text-slate-500 italic leading-relaxed">{note || "Không có ghi chú thêm."}</p>
                                 </div>
                             </div>
 
@@ -1361,36 +1450,15 @@
                                 <span className="block text-[10px] text-zinc-400 uppercase tracking-widest font-semibold">
                                     TỔNG TRỊ GIÁ BÁO GIÁ {!showTotal && "(ĐANG ẨN TRÊN PHIẾU)"}
                                 </span>
-                                <span className="text-xl md:text-2xl font-black text-zinc-100 tracking-tight font-montserrat">
-                                    {formatVND(grandTotal)}
-                                </span>
+                                <span className="text-xl md:text-2xl font-black text-zinc-100 tracking-tight font-montserrat">{formatVND(grandTotal)}</span>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end mt-2 sm:mt-0">
-                                {/* NÚT XUẤT PNG (PHONG CÁCH 3D XÁM BẠC) */}
-                                <button 
-                                    onClick={handleExportPNG}
-                                    disabled={isGeneratingPNG || isGeneratingPDF}
-                                    className={getExportBtnClass(isGeneratingPNG, false)}
-                                >
-                                    {isGeneratingPNG ? (
-                                        "ĐANG TẠO FILE ẢNH..."
-                                    ) : (
-                                        "XUẤT FILE PNG"
-                                    )}
+                                <button onClick={handleExportPNG} disabled={isGeneratingPNG || isGeneratingPDF} className={getExportBtnClass(isGeneratingPNG, false)}>
+                                    {isGeneratingPNG ? "ĐANG TẠO FILE ẢNH..." : "XUẤT FILE PNG"}
                                 </button>
-
-                                {/* NÚT XUẤT PDF (PHONG CÁCH 3D XÁM BẠC) */}
-                                <button 
-                                    onClick={handlePrint}
-                                    disabled={isGeneratingPDF || isGeneratingPNG}
-                                    className={getExportBtnClass(isGeneratingPDF, true)}
-                                >
-                                    {isGeneratingPDF ? (
-                                        "ĐANG KHỞI TẠO FILE PDF..."
-                                    ) : (
-                                        "XUẤT FILE PDF"
-                                    )}
+                                <button onClick={handlePrint} disabled={isGeneratingPDF || isGeneratingPNG} className={getExportBtnClass(isGeneratingPDF, true)}>
+                                    {isGeneratingPDF ? "ĐANG KHỞI TẠO FILE PDF..." : "XUẤT FILE PDF"}
                                 </button>
                             </div>
                         </div>
