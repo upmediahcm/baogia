@@ -125,6 +125,10 @@
             const [showConfirmModal, setShowConfirmModal] = useState(false);
             const [pendingCategory, setPendingCategory] = useState(null);
 
+            // Trạng thái modal cảnh báo lỗi nhập liệu (Ví dụ: Trống tên dự án)
+            const [showErrorModal, setShowErrorModal] = useState(false);
+            const [errorMessage, setErrorMessage] = useState("");
+
             // Danh sách hóa đơn tích lũy được hợp nhất
             const [invoiceItems, setInvoiceItems] = useState([]);
             const [discountPercent, setDiscountPercent] = useState(0);
@@ -136,12 +140,10 @@
             const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
             const [isGeneratingPNG, setIsGeneratingPNG] = useState(false);
 
-            // 1. STATE CHO GÓI QUẢNG CÁO - Cập nhật mặc định các tùy chọn số lượng bằng 0
-            const [qcOption, setQcOption] = useState('1_2_CLIPS'); 
+            // 1. STATE CHO GÓI QUẢNG CÁO - Thay thế các cấu hình cũ bằng hệ thống thông minh tự động hóa
+            const [qcClipQty, setQcClipQty] = useState(0); 
             const [qcMauQty, setQcMauQty] = useState(0); 
-            const [qcIncludeQuay, setQcIncludeQuay] = useState(false);
-            const [qcDungQty, setQcDungQty] = useState(0);
-            const [qcKichBanQty, setQcKichBanQty] = useState(0);
+            const [qcExtraMauQty, setQcExtraMauQty] = useState(0); // Diễn viên phụ 1tr/ngày
 
             // 2. STATE CHO GÓI XÂY KÊNH - Cập nhật mặc định các tùy chọn số lượng bằng 0
             const [xkPackage, setXkPackage] = useState('THUONG_20'); 
@@ -189,26 +191,84 @@
             const [propTarget, setPropTarget] = useState("");
             const [propMessage, setPropMessage] = useState("");
             const [propDirection, setPropDirection] = useState("");
-            const [propTerms, setPropTerms] = useState(
-                "1. Thanh toán: Tạm ứng 50% chi phí sau khi thống nhất kịch bản. Thanh toán 50% còn lại sau khi nghiệm thu bàn giao.\n" +
-                "2. Chỉnh sửa: Đã bao gồm tối đa 02 lần chỉnh sửa dựa trên kịch bản ban đầu. Các yêu cầu thay đổi cốt kịch bản sau khi đã quay sẽ tính phí phát sinh.\n" +
-                "3. Bản quyền: UP MEDIA cam kết sử dụng nhạc nền bản quyền thương mại. Khách hàng sở hữu hoàn bộ bản quyền sử dụng thành phẩm sau khi thanh toán đầy đủ."
-            );
+            
+            // State quản lý trạng thái ẩn/hiện danh sách đề xuất nhanh
+            const [openSuggestions, setOpenSuggestions] = useState({
+                objective: false,
+                target: false,
+                message: false,
+                direction: false
+            });
 
-            // Tự động gợi ý định hướng sản xuất mặc định dựa trên tab dòng sản phẩm
-            const defaultDirections = {
-                QUANG_CAO: "Tập trung xây dựng visual bắt mắt ngay 3 giây đầu tiên để giữ chân người xem. Sử dụng góc quay đặc tả sản phẩm kết hợp bối cảnh năng động, nhịp hậu kỳ mượt mà kết hợp hiệu ứng chữ hiện đại nhằm kích thích hành vi chuyển đổi.",
-                XAY_KENH: "Thiết lập tính nhất quán từ MC dẫn dắt, bối cảnh studio tối giản và ánh sáng ấm áp. Kịch bản tối ưu hóa định dạng 9:16 trên nền tảng di động, bổ sung phụ đề hiệu ứng động (kinetic typography) và nhạc xu hướng để giữ chân người xem trọn vẹn.",
-                QUAY_BDS: "Khai thác tối đa vẻ đẹp kiến trúc và quy mô dự án. Ứng dụng công nghệ quay steadycam chống rung mượt mà ở mặt đất kết hợp các góc bay flycam bao quát từ trên cao. Căn màu sắc điện ảnh ấm áp sang trọng làm nổi bật vị thế bất động sản.",
-                EVENT: "Tác nghiệp đa dạng các góc máy bám sát toàn bộ hoạt động chính của sự kiện. Ghi lại tự nhiên các khoảnh khắc cảm xúc chân thực của khách mời và ban tổ chức. Phần dựng recap cô đọng có cao trào, lồng nhạc nền không khí sôi động bùng nổ.",
-                THOI_TRANG: "Tập trung khai thác phom dáng, chất liệu và chuyển động tinh tế của trang phục. Áp dụng kỹ thuật ánh sáng studio high-fashion cao cấp, phối hợp các góc quay lookbook chuyển động nhịp nhàng cùng model. Biên tập hậu kỳ cuốn hút, màu sắc thời thượng bắt kịp xu thế thương mại thời trang hiện đại.",
-                DICH_VU_LE: "Cấu hình sản xuất và hậu kỳ chuyên biệt được thiết kế may đo tỉ mỉ bám sát mọi yêu cầu phát sinh từ khách hàng, cam kết tiến độ bàn giao nhanh chóng và chất lượng hiển thị chuẩn sắc nét thương mại."
-            };
+            // State quản lý điều khoản đề xuất và cờ theo dõi thay đổi thủ công
+            const [propTerms, setPropTerms] = useState("");
+            const [isTermsEdited, setIsTermsEdited] = useState(false);
+
+            // Tự động phân tích các dịch vụ đang có thực tế trong báo giá (Để đồng bộ Quy trình & Timeline)
+            const activeQuoteCategories = useMemo(() => {
+                if (invoiceItems.length === 0) {
+                    return [activeCategory]; // Trả về category đang chọn cấu hình nếu báo giá trống
+                }
+                const cats = new Set();
+                invoiceItems.forEach(item => {
+                    if (item.id.startsWith('qc_')) cats.add('QUANG_CAO');
+                    else if (item.id.startsWith('xk_')) cats.add('XAY_KENH');
+                    else if (item.id.startsWith('bds_')) cats.add('QUAY_BDS');
+                    else if (item.id.startsWith('event_')) cats.add('EVENT');
+                    else if (item.id.startsWith('tt_')) cats.add('THOI_TRANG');
+                    else if (item.id.startsWith('dl_')) cats.add('DICH_VU_LE');
+                });
+                return Array.from(cats);
+            }, [invoiceItems, activeCategory]);
+
+            // Hàm tự động tạo đề xuất cho Listbox dựa trên Tên dự án & Phân loại dịch vụ đang chọn
+            const generatedSuggestions = useMemo(() => {
+                const proj = projectName.trim() || "Dự án";
+                const catLabel = {
+                    QUANG_CAO: "quảng cáo sản phẩm",
+                    XAY_KENH: "xây dựng kênh video ngắn",
+                    QUAY_BDS: "truyền thông bất động sản",
+                    EVENT: "quay recap sự kiện",
+                    THOI_TRANG: "lookbook thời trang",
+                    DICH_VU_LE: "sản xuất video"
+                }[activeCategory] || "sản xuất video";
+
+                return {
+                    objectives: [
+                        `Tăng nhận diện thương hiệu cho ${proj} và tiếp cận mạnh mẽ tệp người xem mục tiêu trên các nền tảng mạng xã hội.`,
+                        `Tối ưu hóa tỉ lệ chuyển đổi đơn hàng, nâng cao doanh số bán hàng trực tiếp của dự án ${proj}.`,
+                        `Định hình phong cách truyền thông chuyên nghiệp, tạo dựng uy tín và định vị vị thế dẫn đầu của thương hiệu ${proj}.`
+                    ],
+                    targets: [
+                        `Khách hàng trẻ tuổi, năng động, thường xuyên giải trí và có thói quen mua sắm thông qua video ngắn trên internet.`,
+                        `Nhóm đối tác, nhà đầu tư trung và cao cấp đòi hỏi hình ảnh trực quan, sang trọng, trung thực và có chiều sâu từ ${proj}.`,
+                        `Cộng đồng người tiêu dùng mục tiêu đang có nhu cầu trực tiếp tìm kiếm giải pháp và sản phẩm dịch vụ từ ${proj}.`
+                    ],
+                    messages: [
+                        `"${proj} - Đột phá phong cách, kiến tạo giá trị thực chất và khẳng định vị thế dẫn đầu."`,
+                        `"Chuyên nghiệp trong từng chuyển động, ${proj} luôn sát cánh cùng sự phát triển bền vững của bạn."`,
+                        `"Trải nghiệm hoàn mỹ, dịch vụ đỉnh cao - Lựa chọn hoàn hảo chỉ có thể là ${proj}."`
+                    ],
+                    directions: [
+                        `Áp dụng góc quay cinematic hiện đại, tập trung đặc tả visual và nhịp dựng nhanh cuốn hút ngay trong 3 giây đầu tiên của video.`,
+                        `Xây dựng kịch bản có chiều sâu bám sát giá trị thực tế của ${proj}, lồng ghép khéo léo thông điệp truyền thông một cách tự nhiên.`,
+                        `Sử dụng hệ thống ánh sáng cao cấp, màu sắc ấm áp chuyên nghiệp kết hợp nhạc nền bắt tai và phụ đề Kinetic motion sinh động.`
+                    ]
+                };
+            }, [projectName, activeCategory]);
+
+            // Thiết lập giá trị mặc định khi người dùng click chọn gợi ý nhanh
+            useEffect(() => {
+                if (!propObjective) setPropObjective("");
+                if (!propTarget) setPropTarget("");
+                if (!propMessage) setPropMessage("");
+                if (!propDirection) setPropDirection("");
+            }, [generatedSuggestions]);
 
             const computedDirection = useMemo(() => {
                 if (propDirection.trim() !== "") return propDirection;
-                return defaultDirections[activeCategory] || defaultDirections.DICH_VU_LE;
-            }, [activeCategory, propDirection]);
+                return generatedSuggestions.directions[0];
+            }, [generatedSuggestions, propDirection]);
 
             // Bảng phong cách màu sắc cho Proposal
             const toneStyles = {
@@ -254,7 +314,7 @@
                 setAiError("");
 
                 const apiKey = ""; // API key được gán tự động tại môi trường runtime
-                const systemPrompt = "Bạn là trợ lý viết nội dung chuyên nghiệp cho UP MEDIA. Hãy soạn đúng 1 câu mô tả dịch vụ ngắn gọn, cô đọng, chuyên nghiệp và có tính thương mại cao (dưới 25 từ) bằng tiếng Việt cho dịch vụ có tên: \"" + serviceName + "\". Chỉ trả về đúng câu mô tả, không thêm tiêu đề, dẫn dắt hay dấu ngoặc kép.";
+                const systemPrompt = "Bạn là trợ lý viết nội dung chuyên nghiệp cho UP MEDIA. Hãy soạn đúng 1 câu mô tả dịch vụ ngắn gọn, cô đọng, chuyên nghiệp và có tính thương mại cao (dịch dưới 25 từ) bằng tiếng Việt cho dịch vụ có tên: \"" + serviceName + "\". Chỉ trả về đúng câu mô tả, không thêm tiêu đề, dẫn dắt hay dấu ngoặc kép.";
 
                 const payload = {
                     contents: [{ parts: [{ text: `Viết mô tả hấp dẫn cho dịch vụ: ${serviceName}` }] }],
@@ -276,7 +336,6 @@
                         const result = await response.json();
                         const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         if (text) {
-                            // Làm sạch văn bản (loại bỏ ngoặc kép hoặc các ký tự markdown thừa)
                             const cleanedText = text.trim()
                                 .replace(/^"|"$/g, '')
                                 .replace(/^\*+|\*+$/g, '')
@@ -299,52 +358,89 @@
                 setIsGeneratingDesc(false);
             };
 
-            // Hàm kết xuất đồ họa Timeline trực quan
+            // Hàm kết xuất đồ họa Timeline trực quan động bám sát các dịch vụ thực tế trong báo giá
             const renderTimeline = (tone) => {
-                const steps = {
+                const singleCategoryTemplates = {
                     QUANG_CAO: [
-                        { title: "Giai đoạn 1: Brief & Kịch Bản", desc: "Thống nhất ý tưởng chủ đạo, kịch bản chi tiết và phân cảnh góc quay.", duration: "Ngày 1 - 3" },
-                        { title: "Giai đoạn 2: Casting & Tiền Kỳ", desc: "Chuẩn bị mẫu diễn xuất, lựa chọn bối cảnh phù hợp và setup thiết bị.", duration: "Ngày 4 - 5" },
-                        { title: "Giai đoạn 3: Sản Xuất Quay Hình", desc: "Triển khai ekip quay phim mặt đất chuyên nghiệp tại hiện trường.", duration: "Ngày 6 - 7" },
-                        { title: "Giai đoạn 4: Hậu Kỳ & Bàn Giao", desc: "Dựng thô, chỉnh màu sắc, chèn âm thanh bản quyền và bàn giao final.", duration: "Ngày 8 - 10" }
+                        { title: "Giai đoạn 1: Brief & Kịch Bản Quảng Cáo", desc: "Thống nhất thông điệp sản phẩm thương mại, viết kịch bản phân cảnh chi tiết và chuẩn bị lời thoại.", duration: "Ngày 1 - 3" },
+                        { title: "Giai đoạn 2: Casting & Setup Tiền Kỳ", desc: "Lựa chọn bối cảnh quay, casting diễn viên/mẫu phù hợp, thiết lập thiết bị camera.", duration: "Ngày 4 - 5" },
+                        { title: "Giai đoạn 3: Sản Xuất Quay Hình", desc: "Triển khai bấm máy tại hiện trường, ghi hình các góc máy đặc tả sản phẩm và bối cảnh.", duration: "Ngày 6 - 7" },
+                        { title: "Giai đoạn 4: Hậu Kỳ & Bàn Giao Video", desc: "Dựng thô, chỉnh màu sắc thương mại, chèn nhạc nền bản quyền, hoàn thiện và bàn giao.", duration: "Ngày 8 - 10" }
                     ],
                     XAY_KENH: [
-                        { title: "Giai đoạn 1: Lên Ý Tưởng & Kịch Bản", desc: "Nghiên cứu thị trường kịch bản tuần tự theo cam kết của gói dịch vụ tháng.", duration: "Tuần 1" },
-                        { title: "Giai đoạn 2: Quay Cuốn Chiếu", desc: "Bấm máy quay tập trung toàn bộ kịch bản tại studio bối cảnh dựng sẵn.", duration: "Tuần 2" },
-                        { title: "Giai đoạn 3: Biên Tập Hậu Kỳ", desc: "Cắt dựng nhịp mượt, chèn nhạc, phụ đề chuyển động kích thích người xem.", duration: "Tuần 3" },
-                        { title: "Giai đoạn 4: Đăng Tải & Nghiệm Thu", desc: "Hướng dẫn tối ưu kênh đăng tải, nghiệm thu bàn giao và đánh giá chỉ số.", duration: "Tuần 4" }
+                        { title: "Giai đoạn 1: Lên Ý Tưởng & Kịch Bản Xây Kênh", desc: "Nghiên cứu thị trường và lên danh sách chủ đề kịch bản chi tiết tuần tự cho gói tháng.", duration: "Tuần 1" },
+                        { title: "Giai đoạn 2: Bấm Máy Quay Cuốn Chiếu", desc: "Sản xuất ghi hình tập trung các kịch bản tại bối cảnh studio bám sát lịch phân vai.", duration: "Tuần 2" },
+                        { title: "Giai đoạn 3: Biên Tập Hậu Kỳ Video Ngắn", desc: "Cắt dựng nhịp mượt, chèn hiệu ứng Kinetic chữ động, nhạc xu hướng giữ chân người xem.", duration: "Tuần 3" },
+                        { title: "Giai đoạn 4: Nghiệm Thu & Tối Ưu Kênh", desc: "Chuẩn hóa định dạng xuất Ultra-HD, hỗ trợ tư vấn khung giờ vàng đăng tải nội dung.", duration: "Tuần 4" }
                     ],
                     QUAY_BDS: [
-                        { title: "Giai đoạn 1: Định Hướng & Khảo Sát", desc: "Khảo sát thực tế hướng sáng, định hình các góc di chuyển máy tối ưu bối cảnh.", duration: "Ngày 1 - 2" },
-                        { title: "Giai đoạn 2: Quay Source Hình Ảnh", desc: "Quay phim mặt đất kết hợp cất cánh flycam lấy toàn cảnh dự án quy mô.", duration: "Ngày 3 - 4" },
-                        { title: "Giai đoạn 3: Hậu Kỳ Chuyên Sâu", desc: "Căn màu sang trọng, chèn kịch bản MC lồng tiếng, bổ sung thông số dự án.", duration: "Ngày 5 - 7" },
-                        { title: "Giai đoạn 4: Bàn Giao Thành Phẩm", desc: "Khách hàng duyệt phân bản thô, tối ưu hoàn chỉnh và giao video gốc.", duration: "Ngày 8" }
+                        { title: "Giai đoạn 1: Khảo Sát Bối Cảnh BDS", desc: "Khảo sát thực địa bối cảnh dự án bất động sản, hướng nắng và lập sơ đồ bay máy.", duration: "Ngày 1 - 2" },
+                        { title: "Giai đoạn 2: Quay Source & Flycam", desc: "Bấm máy quay góc mặt đất kết hợp điều phối Flycam lấy bao quát quy mô tầm cao của dự án.", duration: "Ngày 3 - 4" },
+                        { title: "Giai đoạn 3: Hậu Kỳ Chuyên Sâu BDS", desc: "Áp dụng kỹ thuật căn màu sắc điện ảnh sang trọng, thu âm lồng tiếng MC giới thiệu tiện ích.", duration: "Ngày 5 - 7" },
+                        { title: "Giai đoạn 4: Nghiệm Thu Bàn Giao", desc: "Duyệt clip thô, tối ưu các góc chỉnh theo yêu cầu thực tế và đóng gói bàn giao.", duration: "Ngày 8" }
                     ],
                     EVENT: [
-                        { title: "Giai đoạn 1: Thống Nhất Timeline", desc: "Tiếp nhận timeline sự kiện chi tiết từ ban tổ chức để báo trí góc máy sẵn.", duration: "Trước 1 ngày" },
-                        { title: "Giai đoạn 2: Tác Nghiệp Sự Kiện", desc: "Ghi nhận đầy đủ chuỗi hoạt động chính, bắt trọn khoảnh khắc vàng.", duration: "Ngày diễn ra" },
-                        { title: "Giai đoạn 3: Hậu Kỳ Recap & Ảnh", desc: "Bàn giao file ảnh thô đã căn chỉnh màu sắc và dựng video recap cô đọng.", duration: "Ngày 1 - 2" },
-                        { title: "Giai đoạn 4: Đóng File Hoàn Thiện", desc: "Gửi toàn bộ album ảnh nét chất lượng cao và file video recap final.", duration: "Ngày 3 - 4" }
+                        { title: "Giai đoạn 1: Khớp Timeline Sự Kiện", desc: "Tiếp nhận sơ đồ, kịch bản chương trình từ ban tổ chức để chuẩn bị góc máy quay chụp sẵn sàng.", duration: "Trước 1 ngày" },
+                        { title: "Giai đoạn 2: Tác Nghiệp Hiện Trường", desc: "Quay/chụp bám sát toàn bộ hoạt động chính, ghi nhận tự nhiên các khoảnh khắc cảm xúc chân thực.", duration: "Ngày diễn ra" },
+                        { title: "Giai đoạn 3: Hậu Kỳ Recap & Lọc Ảnh", desc: "Lọc album ảnh chỉnh màu và dựng video recap cô đọng có cao trào, phối nhạc sôi động.", duration: "Ngày 1 - 2" },
+                        { title: "Giai đoạn 4: Bàn Giao File Final", desc: "Đóng gói toàn bộ tài nguyên chất lượng cao lên drive lưu trữ and bàn giao cho ban tổ chức.", duration: "Ngày 3 - 4" }
                     ],
                     THOI_TRANG: [
-                        { title: "Giai đoạn 1: Lên Ý Tưởng & Phối Đồ", desc: "Thống nhất layout makeup, định hình moodboard ánh sáng và bối cảnh phù hợp bộ sưu tập.", duration: "Ngày 1 - 2" },
-                        { title: "Giai đoạn 2: Tác Nghiệp Studio/On-set", desc: "Tiến hành quay cuốn chiếu chi tiết các sản phẩm thời trang cùng mẫu và ekip.", duration: "Ngày 3 - 4" },
-                        { title: "Giai đoạn 3: Hậu Kỳ & Khớp Nhạc", desc: "Biên tập cắt dựng nhịp nhanh thời thượng, hiệu ứng thời trang, căn chỉnh chuẩn màu vải.", duration: "Ngày 5 - 6" },
-                        { title: "Giai đoạn 4: Bàn Giao Thành Phẩm", desc: "Duyệt clip tổng thể, tối ưu xuất file định dạng Ultra-HD chất lượng cao thương mại.", duration: "Ngày 7" }
+                        { title: "Giai đoạn 1: Moodboard Ý Tưởng Lookbook", desc: "Thống nhất concept, chuẩn bị layout makeup, bối cảnh studio và phân phối trang phục.", duration: "Ngày 1 - 2" },
+                        { title: "Giai đoạn 2: Tác Nghiệp Studio / On-Set", desc: "Thực hiện quay cuốn chi tiết sản phẩm thời trang cùng người mẫu chuyên nghiệp.", duration: "Ngày 3 - 4" },
+                        { title: "Giai đoạn 3: Hậu Kỳ & Căn Màu Vải", desc: "Dựng nhịp mượt chuẩn phong cách high-fashion, căn chỉnh chính xác màu sắc thớ vải.", duration: "Ngày 5 - 6" },
+                        { title: "Giai đoạn 4: Bàn Giao Nghiệm Thu", desc: "Xuất file chuẩn màu thương mại sắc nét Ultra-HD phục vụ chiến dịch ra mắt bộ sưu tập.", duration: "Ngày 7" }
                     ],
                     DICH_VU_LE: [
-                        { title: "Giai đoạn 1: Tiếp Nhận Mô Tả", desc: "Lắng nghe nhu cầu cụ thể từ khách hàng để chuẩn bị nhân sự tương ứng.", duration: "Ngày 1" },
-                        { title: "Giai đoạn 2: Bấm Máy Thực Tế", desc: "Tiến hành quay bám sát thời lượng cấu hình đã chọn (nửa ngày/nguyên ngày).", duration: "Ngày 2" },
-                        { title: "Giai đoạn 3: Hậu Kỳ May Đo Lẻ", desc: "Cắt ghép và chèn hiệu ứng cơ bản theo mong muốn trao đổi trực tiếp.", duration: "Ngày 3 - 5" },
-                        { title: "Giai đoạn 4: Bàn Giao Nghiệm Thu", desc: "Gửi clip duyệt, hoàn thiện chỉnh sửa nhanh và đóng nghiệm thu.", duration: "Ngày 6" }
+                        { title: "Giai đoạn 1: Khớp Yêu Cầu Riêng Biệt", desc: "Trao đổi sâu về mong muốn, định hướng bối cảnh và chuẩn bị đúng ekip chuyên môn.", duration: "Ngày 1" },
+                        { title: "Giai đoạn 2: Thực Hiện Quay Lẻ", desc: "Bấm máy quay bám sát thời lượng cấu hình đã chọn (nửa ngày hoặc nguyên ngày).", duration: "Ngày 2" },
+                        { title: "Giai đoạn 3: Hậu Kỳ Cắt Dựng Cơ Bản", desc: "Tiến hành cắt ghép thô, phối nhạc và tinh chỉnh hiệu ứng chuyển cảnh cơ bản.", duration: "Ngày 3 - 5" },
+                        { title: "Giai đoạn 4: Bàn Giao Nghiệm Thu", desc: "Duyệt demo thô, hoàn thiện chỉnh sửa theo thỏa thuận và bàn giao file cuối cùng.", duration: "Ngày 6" }
                     ]
                 };
 
-                const currentSteps = steps[activeCategory] || steps.DICH_VU_LE;
+                let stepsToRender = [];
+
+                if (activeQuoteCategories.length > 1) {
+                    const categoryNames = activeQuoteCategories.map(cat => {
+                        if (cat === 'QUANG_CAO') return "Quảng cáo";
+                        if (cat === 'XAY_KENH') return "Xây kênh";
+                        if (cat === 'QUAY_BDS') return "Bất động sản";
+                        if (cat === 'EVENT') return "Sự kiện";
+                        if (cat === 'THOI_TRANG') return "Thời trang Lookbook";
+                        return "Dịch vụ lẻ";
+                    }).join(', ');
+
+                    stepsToRender = [
+                        { 
+                            title: "Giai đoạn 1: Nghiên cứu & Tiền kỳ tổng hợp", 
+                            desc: `Xây dựng ý tưởng kịch bản và kế hoạch triển khai đồng loạt cho các hạng mục: ${categoryNames}. Setup nhân sự, chuẩn bị bối cảnh nhất quán để tối ưu chi phí.`, 
+                            duration: "Ngày 1 - 4" 
+                        },
+                        { 
+                            title: "Giai đoạn 2: Tác nghiệp & Sản xuất quay hình", 
+                            desc: "Triển khai ekip quay phim hiện trường, điều phối diễn viên/người mẫu, sử dụng các thiết bị ghi hình mặt đất chuyên dụng và bay Flycam theo cấu hình đã phê duyệt.", 
+                            duration: "Ngày 5 - 7" 
+                        },
+                        { 
+                            title: "Giai đoạn 3: Hậu kỳ & Biên tập kỹ thuật đồng bộ", 
+                            desc: "Xử lý cắt dựng thô, căn chỉnh màu sắc hài hòa đúng tinh thần nhận diện. Lồng tiếng MC chuyên nghiệp, lồng nhạc bản quyền thương mại và bổ sung hiệu ứng visual.", 
+                            duration: "Ngày 8 - 12" 
+                        },
+                        { 
+                            title: "Giai đoạn 4: Nghiệm thu demo & Bàn giao toàn bộ", 
+                            desc: "Tiến hành gửi bản duyệt demo tổng hợp, tiếp nhận các phản hồi điều chỉnh tối ưu và đóng gói bàn giao toàn bộ gói thành phẩm đạt chất lượng Ultra-HD sắc nét.", 
+                            duration: "Ngày 13 - 15" 
+                        }
+                    ];
+                } else {
+                    const singleCat = activeQuoteCategories[0] || 'QUANG_CAO';
+                    stepsToRender = singleCategoryTemplates[singleCat] || singleCategoryTemplates.QUANG_CAO;
+                }
 
                 return (
                     <div className="space-y-4 font-normal">
-                        {currentSteps.map((step, index) => (
+                        {stepsToRender.map((step, index) => (
                             <div key={index} className="flex gap-4 items-start text-xs">
                                 <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${tone.accentBg} ${tone.accentText}`}>
                                     {index + 1}
@@ -372,7 +468,6 @@
             const handleCategoryClick = (category) => {
                 if (category === activeCategory) return;
                 
-                // Nếu đang có hạng mục trong báo giá, hiện cảnh báo tùy chỉnh
                 if (invoiceItems.length > 0) {
                     setPendingCategory(category);
                     setShowConfirmModal(true);
@@ -445,7 +540,7 @@
             const getExportBtnClass = (isGenerating, isPdf) => {
                 const base = "font-bold py-3 px-6 rounded-lg transition-all duration-75 text-xs flex items-center gap-2 shadow-lg active:translate-y-[4px] ";
                 if (isGenerating) {
-                    return base + "bg-zinc-800 text-zinc-500 cursor-not-allowed border-b-0";
+                    return base + "bg-zinc-850 text-zinc-500 cursor-not-allowed border-b-0";
                 }
                 if (isPdf) {
                     return base + "bg-gradient-to-b from-zinc-100 to-zinc-300 text-zinc-950 border-b-4 border-zinc-500 active:border-b-0 hover:from-white hover:to-zinc-200 shadow-zinc-400/10";
@@ -465,50 +560,79 @@
 
                 if (activeCategory === 'QUANG_CAO') {
                     categoryName = "Dịch Vụ Video Quảng Cáo";
-                    if (qcOption === '1_2_CLIPS') {
+                    
+                    if (qcClipQty > 0) {
+                        // Tính số ngày quay: từ 11 clips trở lên mới tính 2 ngày quay, còn lại dưới 11 thì là 1 ngày.
+                        const qcDays = qcClipQty >= 11 ? 2 : (qcClipQty > 0 ? 1 : 0);
+                        const isSmall = qcClipQty <= 2;
+
                         items.push({
                             id: 'qc_option_title',
-                            name: "Gói Quảng Cáo (Hạng mục 1-2 clips) - Cơ bản",
-                            desc: "Phù hợp doanh nghiệp vừa và nhỏ, tối ưu ngân sách quảng bá sản phẩm",
+                            name: `Gói Quảng Cáo (${qcClipQty} Clips) - Tiến độ ${qcDays} ngày quay`,
+                            desc: `Cơ cấu dịch vụ tự động điều chỉnh theo quy mô clips thực tế.`,
                             qty: 1,
                             unitPrice: 0,
                             subtotal: 0,
                             isHeader: true
                         });
-                        if (qcMauQty > 0) {
-                            items.push({ id: 'qc_mau', name: "Mẫu/Diễn viên quay quảng cáo (1-2 clips)", desc: "Diễn viên mẫu diễn xuất hình thể, trải nghiệm dịch vụ", qty: qcMauQty, unitPrice: 1500000, subtotal: qcMauQty * 1500000 });
-                        }
-                        if (qcIncludeQuay) {
-                            items.push({ id: 'qc_quay', name: "Chi phí quay phim quảng cáo (1-2 clips)", desc: "Trang thiết bị, ánh sáng, nhân sự quay phim chuyên nghiệp", qty: 1, unitPrice: 1500000, subtotal: 1500000 });
-                        }
-                        if (qcDungQty > 0) {
-                            items.push({ id: 'qc_dung', name: "Dựng clip hoàn thiện", desc: "Hậu kỳ, cắt ghép, hiệu ứng hình ảnh, nhạc nền bản quyền", qty: qcDungQty, unitPrice: 300000, subtotal: qcDungQty * 300000 });
-                        }
-                        if (qcKichBanQty > 0) {
-                            items.push({ id: 'qc_kb', name: "Kịch bản phân cảnh chi tiết", desc: "Biên kịch lên ý tưởng, lời thoại, góc quay chuẩn marketing", qty: qcKichBanQty, unitPrice: 200000, subtotal: qcKichBanQty * 200000 });
-                        }
-                    } else {
+
+                        // 1. Kịch bản quảng cáo (được bằng số clip)
                         items.push({
-                            id: 'qc_option_title',
-                            name: "Gói Quảng Cáo (Hạng mục 3-5 clips) - Tối Ưu",
-                            desc: "Phủ sóng hình ảnh thương hiệu đa nền tảng, tăng tỷ lệ chuyển đổi",
-                            qty: 1,
-                            unitPrice: 0,
-                            subtotal: 0,
-                            isHeader: true
+                            id: 'qc_kb',
+                            name: "Biên soạn kịch bản chi tiết quảng cáo",
+                            desc: "Biên kịch lên ý tưởng, lời thoại chuẩn tiếp thị.",
+                            qty: qcClipQty,
+                            unitPrice: 200000,
+                            subtotal: qcClipQty * 200000
                         });
+
+                        // 2. Chi phí quay phim (đầy đủ theo công thức)
+                        const quayPrice = isSmall ? 1500000 : 3000000;
+                        const quayQty = isSmall ? 1 : qcDays;
+                        items.push({
+                            id: 'qc_quay',
+                            name: isSmall ? "Chi phí quay cố định (gồm quay phim & thiết bị)" : `Chi phí quay phim quảng cáo (${qcDays} ngày quay)`,
+                            desc: isSmall ? "Trọn gói thiết bị, ánh sáng, nhân sự quay phim cơ bản cho 1-2 clips." : `Ekip quay chuyên nghiệp, camera Sony cao cấp & ánh sáng đầy đủ. Đơn giá: 3.000.000 đ/ngày.`,
+                            qty: quayQty,
+                            unitPrice: quayPrice,
+                            subtotal: quayQty * quayPrice
+                        });
+
+                        // 3. Chi phí mẫu chính
                         if (qcMauQty > 0) {
-                            items.push({ id: 'qc_mau', name: "Mẫu/Diễn viên quay quảng cáo (3-5 clips)", desc: "Diễn viên ngoại hình sáng, phù hợp định vị thương hiệu", qty: qcMauQty, unitPrice: 2500000, subtotal: qcMauQty * 2500000 });
+                            const unitPrice = isSmall ? 1500000 : 2500000;
+                            const totalQty = isSmall ? qcMauQty : (qcMauQty * qcDays);
+                            items.push({
+                                id: 'qc_mau',
+                                name: `Diễn viên / Mẫu chính quay quảng cáo ${isSmall ? "" : `(${qcDays} ngày)`}`,
+                                desc: isSmall ? "Mẫu diễn xuất hình thể, trải nghiệm sản phẩm. Đơn giá: 1.500.000 đ/người." : `Mẫu chính thương hiệu chuyên nghiệp. Đơn giá: 2.500.000 đ/người/ngày.`,
+                                qty: totalQty,
+                                unitPrice: unitPrice,
+                                subtotal: totalQty * unitPrice
+                            });
                         }
-                        if (qcIncludeQuay) {
-                            items.push({ id: 'qc_quay', name: "Chi phí quay phim quảng cáo (3-5 clips)", desc: "Thiết bị Sony/Mirrorless cao cấp, hỗ thuật kỹ thuật hiện trường", qty: 1, unitPrice: 3000000, subtotal: 3000000 });
+
+                        // 4. Chi phí mẫu phụ (mới)
+                        if (qcExtraMauQty > 0) {
+                            items.push({
+                                id: 'qc_extra_mau',
+                                name: `Diễn viên phụ quay quảng cáo (${qcDays} ngày)`,
+                                desc: "Diễn viên phụ hỗ trợ diễn xuất, lấp đầy bối cảnh. Đơn giá: 1.000.000 đ/người/ngày.",
+                                qty: qcExtraMauQty * qcDays,
+                                unitPrice: 1000000,
+                                subtotal: qcExtraMauQty * qcDays * 1000000
+                            });
                         }
-                        if (qcDungQty > 0) {
-                            items.push({ id: 'qc_dung', name: "Dựng clip hoàn thiện", desc: "Hậu kỳ, dựng tối ưu nhịp điệu kích thích hành động mua hàng", qty: qcDungQty, unitPrice: 300000, subtotal: qcDungQty * 300000 });
-                        }
-                        if (qcKichBanQty > 0) {
-                            items.push({ id: 'qc_kb', name: "Kịch bản phân cảnh chi tiết", desc: "Kịch bản bán hàng đánh trúng nỗi đau và giải pháp cho khách", qty: qcKichBanQty, unitPrice: 200000, subtotal: qcKichBanQty * 200000 });
-                        }
+
+                        // 5. Dựng video hoàn thiện
+                        items.push({
+                            id: 'qc_dung',
+                            name: "Dựng video quảng cáo hoàn thiện",
+                            desc: "Hậu kỳ, cắt ghép, hiệu ứng chuyển cảnh, chèn nhạc bản quyền thương mại.",
+                            qty: qcClipQty,
+                            unitPrice: 300000,
+                            subtotal: qcClipQty * 300000
+                        });
                     }
                 } 
                 else if (activeCategory === 'XAY_KENH') {
@@ -534,21 +658,20 @@
                         pkgTitle = "Gói Thường 30 Video";
                     } else if (xkPackage === 'CAOCAP_20') {
                         qty = 20;
-                        kbPrice = 250000; // Sửa theo yêu cầu
-                        dungPrice = 400000; // Sửa theo yêu cầu
+                        kbPrice = 250000;
+                        dungPrice = 400000;
                         quayPrice = 4000000;
                         pkgTitle = "Gói Cao Cấp 20 Video";
                         isCaoCap = true;
                     } else if (xkPackage === 'CAOCAP_30') {
                         qty = 30;
-                        kbPrice = 250000; // Sửa theo yêu cầu
-                        dungPrice = 400000; // Sửa theo yêu cầu
+                        kbPrice = 250000;
+                        dungPrice = 400000;
                         quayPrice = 5000000;
                         pkgTitle = "Gói Cao Cấp 30 Video";
                         isCaoCap = true;
                     }
 
-                    // Thêm Header ẩn (giúp giao diện live A4 nhận diện nhóm nội dung)
                     items.push({
                         id: 'xk_pkg_header',
                         name: "Hạng Mục Xây Kênh: " + pkgTitle + " / Tháng",
@@ -559,7 +682,6 @@
                         isHeader: true
                     });
 
-                    // Chi tiết kịch bản
                     items.push({
                         id: 'xk_kb',
                         name: "Biên soạn kịch bản video chi tiết (" + pkgTitle + ")",
@@ -569,7 +691,6 @@
                         subtotal: qty * kbPrice
                     });
 
-                    // Chi tiết quay phim
                     items.push({
                         id: 'xk_quay',
                         name: "Quay phim & Thiết bị bối cảnh (" + pkgTitle + ")",
@@ -579,7 +700,6 @@
                         subtotal: quayPrice
                     });
 
-                    // Chi tiết dựng phim
                     items.push({
                         id: 'xk_dung',
                         name: "Hậu kỳ dựng clip video hoàn thiện (" + pkgTitle + ")",
@@ -589,7 +709,6 @@
                         subtotal: qty * dungPrice
                     });
 
-                    // Thêm quản lý kênh cho gói cao cấp theo yêu cầu (3.000.000đ)
                     if (isCaoCap) {
                         items.push({
                             id: 'xk_quan_ly',
@@ -618,7 +737,7 @@
                             desc: "Nhân sự mẫu dẫn kênh, giọng thoại chuẩn, lưu loát, ngoại hình sáng, truyền tải nội dung chuyên nghiệp.",
                             qty: xkModelVoiceDays,
                             unitPrice: 2500000,
-                            subtotal: xkModelVoiceDays * 2500000
+                            subtotal: xkModelVoiceDays * 2500005
                         });
                     }
                 } 
@@ -637,14 +756,12 @@
                     });
 
                     if (isQc) {
-                        // TỰ ĐỘNG HÓA QUY TRÌNH CHO QUẢNG CÁO BẤT ĐỘNG SẢN
                         const kbPrice = 350000;
-                        const dungPrice = 500000; // Đơn giá dựng: 500k/video
+                        const dungPrice = 500000;
                         const quayPrice = 3000000;
 
                         const calculatedKbQty = bdsQcVideoQty;
                         const calculatedDungQty = bdsQcVideoQty;
-                        // Một ngày chỉ quay tối đa 6 kịch bản quảng cáo, nếu trên 6 tự động thêm 1 ngày quay
                         const calculatedQuayDays = bdsQcVideoQty > 0 ? Math.ceil(bdsQcVideoQty / 6) : 0;
 
                         if (calculatedKbQty > 0) {
@@ -678,14 +795,12 @@
                             });
                         }
                     } else {
-                        // TỰ ĐỘNG HÓA QUY TRÌNH CHO XÂY KÊNH BDS (MỚI ĐƯỢC ĐỒNG BỘ)
                         const kbPrice = 250000;
-                        const dungPrice = 400000; // Đơn giá dựng mới: 400k/video theo yêu cầu
+                        const dungPrice = 400000;
                         const quayPrice = 3000000;
 
                         const calculatedKbQty = bdsXkVideoQty;
                         const calculatedDungQty = bdsXkVideoQty;
-                        // Một ngày quay tối đa 6 kịch bản, nếu trên 6 tự động thêm 1 ngày quay
                         const calculatedQuayDays = bdsXkVideoQty > 0 ? Math.ceil(bdsXkVideoQty / 6) : 0;
 
                         if (calculatedKbQty > 0) {
@@ -720,7 +835,6 @@
                         }
                     }
 
-                    // FLYCAM & MẪU LẺ GIỮ NGUYÊN HOÀN TOÀN NHƯ CŨ
                     if (bdsFlycamDays > 0) {
                         items.push({
                             id: 'bds_flycam',
@@ -737,8 +851,8 @@
                             name: "Nhân sự MC/Mẫu trải nghiệm BDS",
                             desc: "Dẫn dắt trực quan, tạo niềm tin cho người xem về dự án bất động sản thực tế. Đơn giá: 2.500.000đ/ngày.",
                             qty: bdsMauDays,
-                            unitPrice: 2500005,
-                            subtotal: bdsMauDays * 2500000
+                            unitPrice: 2500000,
+                            subtotal: bdsMauDays * 2500005
                         });
                     }
                 } 
@@ -840,10 +954,8 @@
                     });
 
                     if (ttProductQty > 0) {
-                        // Tính toán lũy tiến số ngày sản xuất: 1 ngày chỉ quay tối đa 15 sản phẩm, hơn 15 tự động nhảy ngày
                         const calculatedDays = Math.ceil(ttProductQty / 15);
                         
-                        // 1. Giá quay (3.000.000 đ / ngày) - Sửa từ 3.500.000đ thành 3.000.000đ theo yêu cầu
                         items.push({
                             id: 'tt_quay',
                             name: `Chi phí quay phim thời trang (${calculatedDays} ngày)`,
@@ -853,7 +965,6 @@
                             subtotal: calculatedDays * 3000000
                         });
 
-                        // 2. Chi phí mẫu (3.000.000 đ / ngày)
                         items.push({
                             id: 'tt_mau',
                             name: `Chi phí mẫu / Diễn viên thời trang (${calculatedDays} ngày)`,
@@ -863,17 +974,15 @@
                             subtotal: calculatedDays * 3000000
                         });
 
-                        // 3. Giá dựng clip (300.000 đ / sản phẩm)
                         items.push({
                             id: 'tt_dung',
-                            name: `Hậu kỳ dựng clip hoàn thiện sản phẩm thời trang`,
-                            desc: `Biên biên cắt ghép nhịp điệu high-fashion thời thượng, căn chỉnh chuẩn màu sắc chất liệu vải cao cấp thương mại.`,
+                            name: `Hậu kỳ dựng clip video hoàn thiện sản phẩm thời trang`,
+                            desc: `Biên biên cắt ghép nhịp điệu high-fashion thời thượng, căn chỉnh chính xác màu sắc chất liệu vải cao cấp thương mại.`,
                             qty: ttProductQty,
                             unitPrice: 300000,
                             subtotal: ttProductQty * 300000
                         });
 
-                        // 4. Chi phí book studio riêng (1.000.000 đ / 3 tiếng quay - Tùy chọn theo số lượng)
                         if (ttStudioQty > 0) {
                             items.push({
                                 id: 'tt_studio',
@@ -902,7 +1011,7 @@
                         items.push({
                             id: 'dl_quay_phim',
                             name: "Quay Phim & Thiết Bị Lẻ (Nửa ngày)",
-                            desc: "Nhân sự kỹ thuật cùng trang thiết bị quay phim tiêu chuẩn trong vòng 4 tiếng.",
+                            desc: "Nhân sự kỹ thuật cùng trang thiết bị quay phim chuyên dụng trong vòng 4 tiếng.",
                             qty: 1,
                             unitPrice: 2000000,
                             subtotal: 2000000
@@ -911,7 +1020,7 @@
                         items.push({
                             id: 'dl_quay_phim',
                             name: "Quay Phim & Thiết Bị Lẻ (Nguyên ngày)",
-                            desc: "Nhân sự kỹ thuật cùng trang thiết bị quay phim tiêu chuẩn trong vòng 8 tiếng.",
+                            desc: "Nhân sự kỹ thuật cùng trang thiết bị quay phim chuyên dụng trong vòng 8 tiếng.",
                             qty: 1,
                             unitPrice: 3000000,
                             subtotal: 3000000
@@ -953,7 +1062,6 @@
                         });
                     }
 
-                    // TỰ ĐỘNG THÊM DÒNG DỊCH VỤ NGOÀI HỆ THỐNG KHI ĐƯỢC NHẬP HỢP LỆ (Sử dụng dlCustomDesc thay vì mô tả cứng)
                     if (dlCustomName.trim() !== "" && dlCustomPrice > 0) {
                         items.push({
                             id: 'dl_custom_item',
@@ -973,7 +1081,7 @@
                     items,
                     total
                 };
-            }, [activeCategory, qcOption, qcMauQty, qcIncludeQuay, qcDungQty, qcKichBanQty, xkPackage, xkModelNoVoiceDays, xkModelVoiceDays, bdsSubCategory, bdsKichBanQty, bdsDungQty, bdsQuayDays, bdsFlycamDays, bdsMauDays, eventPackage, eventDuration, eventFlycamDays, ttProductQty, ttStudioQty, dlQuayOption, dlDungQty, dlKichBanQty, dlMauOption, dlMauQty, bdsQcVideoQty, bdsXkVideoQty, dlCustomName, dlCustomPrice, dlCustomDesc]);
+            }, [activeCategory, qcClipQty, qcMauQty, qcExtraMauQty, xkPackage, xkModelNoVoiceDays, xkModelVoiceDays, bdsSubCategory, bdsKichBanQty, bdsDungQty, bdsQuayDays, bdsFlycamDays, bdsMauDays, eventPackage, eventDuration, eventFlycamDays, ttProductQty, ttStudioQty, dlQuayOption, dlDungQty, dlKichBanQty, dlMauOption, dlMauQty, bdsQcVideoQty, bdsXkVideoQty, dlCustomName, dlCustomPrice, dlCustomDesc]);
 
             // Quản lý danh sách phần tử cuối cùng trên báo giá
             const finalQuoteItems = useMemo(() => {
@@ -996,8 +1104,31 @@
                 return subtotal - discountAmount + vatAmount;
             }, [subtotal, discountAmount, vatAmount]);
 
+            // Tự động cập nhật điều khoản thanh toán động dựa trên tổng giá trị dự án (mốc 10 triệu VND)
+            useEffect(() => {
+                if (!isTermsEdited) {
+                    const commonTerms = "2. Chỉnh sửa: Đã bao gồm tối đa 02 lần chỉnh sửa dựa trên kịch bản ban đầu. Các yêu cầu thay đổi cốt kịch bản sau khi đã quay sẽ tính phí phát sinh.\n" +
+                                        "3. Bản quyền: UP MEDIA cam kết sử dụng nhạc nền bản quyền thương mại. Khách hàng sở hữu hoàn bộ bản quyền sử dụng thành phẩm sau khi thanh toán đầy đủ.";
+                    
+                    if (grandTotal < 10000000) {
+                        const termUnder10 = "1. Thanh toán: Đề xuất thanh toán 50-50. Tạm ứng 50% chi phí sau khi thống nhất kế hoạch và chốt đề xuất. Thanh toán 50% còn lại sau khi nghiệm thu bàn giao.\n";
+                        setPropTerms(termUnder10 + commonTerms);
+                    } else {
+                        const termOver10 = "1. Thanh toán: Đề xuất thanh toán 50-30-20. Đợt 1 tạm ứng 50% chi phí sau khi thống nhất kế hoạch và chốt đề xuất. Đợt 2 thanh toán 30% sau khi hoàn tất giai đoạn sản xuất quay hình thực tế. Đợt 3 thanh toán 20% còn lại sau khi nghiệm thu bàn giao thành phẩm.\n";
+                        setPropTerms(termOver10 + commonTerms);
+                    }
+                }
+            }, [grandTotal, isTermsEdited]);
+
             // Thêm hạng mục vào danh sách tích lũy chính thức
             const handleAddToQuote = () => {
+                // Kiểm tra tên dự án truyền thông không được để trống
+                if (!projectName.trim()) {
+                    setErrorMessage("BẠN CẦN NHẬP TÊN DỰ ÁN TRƯỚC KHI BÁO GIÁ.");
+                    setShowErrorModal(true);
+                    return;
+                }
+
                 const itemsToAdd = activeCalculation.items.filter(item => !item.isHeader && item.subtotal > 0);
                 
                 if (itemsToAdd.length === 0) {
@@ -1015,6 +1146,7 @@
             const handleClearQuote = () => {
                 setInvoiceItems([]);
                 setActiveMenuId(null);
+                setIsTermsEdited(false); // Reset trạng thái để cập nhật động lại từ đầu
             };
 
             const handleRemoveItem = (id) => {
@@ -1148,9 +1280,76 @@
                 });
             };
 
+            // Khung kết xuất UI phụ trợ chứa các lựa chọn đề xuất nhanh với thiết kế ẩn, chỉ hiện khi nhập dữ liệu, chữ to và hover nổi bật
+            const renderSuggestionBox = (fieldKey, suggestionsArray, currentValue, setter) => {
+                const isOpen = openSuggestions[fieldKey];
+
+                if (!isOpen) return null;
+
+                return (
+                    <div className="mt-1 bg-zinc-900 border border-amber-500/30 rounded-lg p-2 space-y-1 animate-fadeIn shadow-lg relative z-20">
+                        <div className="space-y-1 max-h-[160px] overflow-y-auto no-scrollbar">
+                            {suggestionsArray.map((suggestion, index) => {
+                                const isSelected = currentValue === suggestion;
+                                return (
+                                    <button
+                                        key={index}
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                            // Sử dụng onMouseDown kèm preventDefault để kích hoạt lưu trước khi bộ sự kiện onBlur dập tắt khung hiển thị
+                                            e.preventDefault();
+                                            setter(suggestion);
+                                            setOpenSuggestions(prev => ({ ...prev, [fieldKey]: false }));
+                                        }}
+                                        className={`w-full text-left text-xs p-2.5 rounded-lg transition-all duration-150 leading-relaxed flex items-start gap-2 border ${
+                                            isSelected 
+                                            ? "bg-amber-500/20 text-white border-amber-400 font-semibold shadow-md shadow-amber-500/5" 
+                                            : "bg-zinc-950 text-zinc-300 border-zinc-800/80 hover:bg-amber-500/10 hover:text-white hover:border-amber-500/40"
+                                        }`}
+                                    >
+                                        <span className="opacity-60 font-bold mt-0.5">{index + 1}.</span>
+                                        <span>{suggestion}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
             return (
                 <div className="flex-grow flex flex-col md:flex-row min-h-screen relative overflow-x-hidden bg-black text-zinc-100">
                     
+                    {/* CUSTOM ERROR MODAL (Cảnh báo khi bỏ trống trường bắt buộc như Tên Dự Án) */}
+                    {showErrorModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn no-print">
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+                                <div className="text-center">
+                                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-amber-950/40 text-amber-400 mb-4 border border-amber-800">
+                                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-2">Thông báo</h3>
+                                    <p className="text-xs text-zinc-300 leading-relaxed font-semibold uppercase">
+                                        {errorMessage}
+                                    </p>
+                                </div>
+                                <div className="mt-6">
+                                    <button 
+                                        onClick={() => {
+                                            setShowErrorModal(false);
+                                            setErrorMessage("");
+                                        }}
+                                        className="w-full bg-gradient-to-b from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-zinc-950 font-bold py-2.5 px-4 rounded-lg text-xs uppercase transition-all duration-75 border-b-2 border-amber-700 active:border-b-0 active:translate-y-[2px]"
+                                    >
+                                        Đồng ý
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* CUSTOM MODAL CONFIRMATION (Xác nhận chuyển đổi dòng sản phẩm) */}
                     {showConfirmModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn no-print">
@@ -1225,7 +1424,10 @@
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-zinc-400 mb-1">Tên Dự Án Truyền Thông</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-xs text-zinc-400">Tên Dự Án Truyền Thông <span className="text-red-500 font-bold">*</span></label>
+                                        <span className="text-[10px] text-amber-500 font-semibold uppercase">Yêu cầu nhập</span>
+                                    </div>
                                     <input 
                                         type="text" 
                                         value={projectName} 
@@ -1237,7 +1439,7 @@
                             </div>
                         </div>
 
-                        {/* MENU CHỌN SẢN PHẨM CHÍNH - Thêm dịch vụ THỜI TRANG ở trước DỊCH VỤ LẺ */}
+                        {/* MENU CHỌN SẢN PHẨM CHÍNH */}
                         <div className="mb-6 bg-zinc-800 p-4 rounded-xl border border-zinc-800">
                             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-200 mb-3 border-b border-zinc-700 pb-2">
                                 Dòng Sản Phẩm Cấu Hình
@@ -1269,18 +1471,24 @@
                             {activeCategory === 'QUANG_CAO' && (
                                 <div className="space-y-4 animate-fadeIn">
                                     <div>
-                                        <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Lựa chọn quy mô số lượng clip quảng cáo</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button onClick={() => setQcOption('1_2_CLIPS')} className={getSubOptionClass(qcOption === '1_2_CLIPS')}>Mẫu 1-2 clips (Cơ bản)</button>
-                                            <button onClick={() => setQcOption('3_5_CLIPS')} className={getSubOptionClass(qcOption === '3_5_CLIPS')}>Mẫu 3-5 clips (Tối ưu)</button>
+                                        <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Số lượng clip quảng cáo cần thực hiện</label>
+                                        <p className="text-[10px] text-zinc-400 mb-2">
+                                            Hệ thống tự động quy đổi số kịch bản, số bản dựng và ngày quay (Đạt từ 11 clips trở lên sẽ tự động nâng lên 2 ngày quay và 2 ngày mẫu).
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => setQcClipQty(Math.max(0, qcClipQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-8 h-8 rounded flex items-center justify-center text-sm font-bold">-</button>
+                                            <input type="number" min="0" value={qcClipQty} onChange={(e) => setQcClipQty(parseInt(e.target.value) || 0)} className="w-16 bg-black border border-zinc-800 text-center rounded text-xs text-white p-2" />
+                                            <button onClick={() => setQcClipQty(qcClipQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-8 h-8 rounded flex items-center justify-center text-sm font-bold">+</button>
                                         </div>
                                     </div>
 
                                     <div className="space-y-3 bg-zinc-800 p-4 rounded-xl border border-zinc-800">
-                                        <div className="flex items-center justify-between py-2 border-b border-zinc-800">
+                                        <div className="flex items-center justify-between py-2 border-b border-zinc-700">
                                             <div>
-                                                <span className="block text-xs font-medium text-white">Số lượng Diễn Viên / Mẫu</span>
-                                                <span className="text-[10px] text-zinc-400">Đơn giá: {qcOption === '1_2_CLIPS' ? '1.500.000 đ' : '2.500.000 đ'} / người</span>
+                                                <span className="block text-xs font-medium text-white">Số lượng Diễn Viên / Mẫu chính</span>
+                                                <span className="text-[10px] text-zinc-400">
+                                                    {qcClipQty <= 2 ? 'Đơn giá: 1.500.000 đ / người' : 'Đơn giá: 2.500.000 đ / người / ngày'}
+                                                </span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => setQcMauQty(Math.max(0, qcMauQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
@@ -1289,38 +1497,37 @@
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between py-2 border-b border-zinc-800">
-                                            <div>
-                                                <span className="block text-xs font-medium text-white">Bao gồm Quay Phim & Thiết bị</span>
-                                                <span className="text-[10px] text-zinc-400">{qcOption === '1_2_CLIPS' ? 'Chi phí cố định: 1.500.000 đ' : 'Chi phí cố định: 3.000.000 đ'}</span>
-                                            </div>
-                                            <input type="checkbox" checked={qcIncludeQuay} onChange={(e) => setQcIncludeQuay(e.target.checked)} className="w-4 h-4 text-zinc-950 bg-zinc-900 border border-zinc-700 rounded focus:ring-zinc-400 cursor-pointer" />
-                                        </div>
-
-                                        <div className="flex items-center justify-between py-2 border-b border-zinc-800">
-                                            <div>
-                                                <span className="block text-xs font-medium text-white">Số lượng clip dựng</span>
-                                                <span className="text-[10px] text-zinc-400">Đơn giá: 300.000 đ / clip</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => setQcDungQty(Math.max(0, qcDungQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
-                                                <input type="number" min="0" value={qcDungQty} onChange={(e) => setQcDungQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setQcDungQty(qcDungQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
-                                            </div>
-                                        </div>
-
                                         <div className="flex items-center justify-between py-2">
                                             <div>
-                                                <span className="block text-xs font-medium text-white">Số lượng kịch bản chuẩn bị</span>
-                                                <span className="text-[10px] text-zinc-400">Đơn giá: 200.000 đ / kịch bản</span>
+                                                <span className="block text-xs font-medium text-white">Số lượng Diễn viên phụ</span>
+                                                <span className="text-[10px] text-zinc-400">Đơn giá: 1.000.000 đ / người / ngày</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => setQcKichBanQty(Math.max(0, qcKichBanQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
-                                                <input type="number" min="0" value={qcKichBanQty} onChange={(e) => setQcKichBanQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
-                                                <button onClick={() => setQcKichBanQty(qcKichBanQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[2px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
+                                                <button onClick={() => setQcExtraMauQty(Math.max(0, qcExtraMauQty - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">-</button>
+                                                <input type="number" min="0" value={qcExtraMauQty} onChange={(e) => setQcExtraMauQty(parseInt(e.target.value) || 0)} className="w-12 bg-black border border-zinc-800 text-center rounded text-xs text-white p-1" />
+                                                <button onClick={() => setQcExtraMauQty(qcExtraMauQty + 1)} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 active:border-b-0 active:translate-y-[4px] w-6 h-6 rounded flex items-center justify-center text-xs font-bold">+</button>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Bảng tính toán ước lượng quảng cáo trực quan */}
+                                    {qcClipQty > 0 && (
+                                        <div className="bg-black/40 p-3 rounded-lg border border-zinc-850 text-[11px] text-zinc-300 space-y-1">
+                                            <span className="block font-bold text-zinc-400 uppercase text-[10px] tracking-wider mb-1">Bảng Dự Toán Tự Động (Quảng Cáo):</span>
+                                            <div>• Số lượng kịch bản (200k/kb): <strong className="text-white">{qcClipQty} kịch bản</strong></div>
+                                            <div>• Số clip cần dựng hoàn thiện (300k/clip): <strong className="text-white">{qcClipQty} clip</strong></div>
+                                            <div>• Số ngày quay cần thiết: <strong className="text-white">{qcClipQty >= 11 ? 2 : 1} ngày</strong></div>
+                                            <div className="pt-1.5 border-t border-zinc-800 mt-1.5 space-y-0.5">
+                                                <div>• Ngân sách kịch bản: <strong className="text-white">{formatVND(qcClipQty * 200000)}</strong></div>
+                                                <div>• Ngân sách quay: <strong className="text-white">{formatVND(qcClipQty <= 2 ? 1500000 : (qcClipQty >= 11 ? 2 * 3000000 : 3000000))}</strong></div>
+                                                <div>• Ngân sách mẫu chính: <strong className="text-white">{formatVND(qcClipQty <= 2 ? qcMauQty * 1500000 : qcMauQty * (qcClipQty >= 11 ? 2 : 1) * 2500000)}</strong></div>
+                                                {qcExtraMauQty > 0 && (
+                                                    <div>• Ngân sách diễn viên phụ: <strong className="text-white">{formatVND(qcExtraMauQty * (qcClipQty >= 11 ? 2 : 1) * 1000000)}</strong></div>
+                                                )}
+                                                <div>• Ngân sách dựng: <strong className="text-white">{formatVND(qcClipQty * 300000)}</strong></div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -1337,7 +1544,7 @@
                                                 </div>
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony | Chuẩn 4K / 30 FPS (8 bit). Đã bao gồm kịch bản, quay và dựng.</p>
                                             </div>
-                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
+                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-slate-800 pt-2 flex justify-between">
                                                 <span>Chi phí trọn gói:</span><span>15.000.000 đ</span>
                                             </div>
                                         </div>
@@ -1350,7 +1557,7 @@
                                                 </div>
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony | Chuẩn 4K / 30 FPS (8 bit). Tối ưu hóa tần suất phủ sóng liên tục.</p>
                                             </div>
-                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
+                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-slate-800 pt-2 flex justify-between">
                                                 <span>Chi phí trọn gói:</span><span>21.000.000 đ</span>
                                             </div>
                                         </div>
@@ -1363,7 +1570,7 @@
                                                 </div>
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony Đời Mới | 4K / 60 FPS (10 bit 4:2:2). Gồm kịch bản (250k/v), dựng (400k/v) & Quản lý kênh (3tr).</p>
                                             </div>
-                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
+                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-slate-800 pt-2 flex justify-between">
                                                 <span>Chi phí trọn gói:</span><span>20.000.000 đ</span>
                                             </div>
                                         </div>
@@ -1376,7 +1583,7 @@
                                                 </div>
                                                 <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Đảm bảo tần suất dày đặc lẫn chất lượng hình ảnh thẩm mỹ đỉnh cao. Gồm kịch bản (250k/v), dựng (400k/v) & Quản lý kênh (3tr).</p>
                                             </div>
-                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-zinc-800 pt-2 flex justify-between">
+                                            <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-slate-800 pt-2 flex justify-between">
                                                 <span>Chi phí trọn gói:</span><span>27.500.000 đ</span>
                                             </div>
                                         </div>
@@ -1424,7 +1631,6 @@
 
                                     <div className="space-y-3.5 bg-zinc-800 p-4 rounded-xl border border-zinc-800">
                                         {bdsSubCategory === 'QC_BDS' ? (
-                                            /* CẤU HÌNH THÔNG MINH CHO QUẢNG CÁO BDS */
                                             <div className="space-y-4">
                                                 <div className="flex flex-col gap-1 pb-3 border-b border-zinc-700">
                                                     <span className="block text-xs font-medium text-white">Số lượng video quảng cáo cần thực hiện</span>
@@ -1451,7 +1657,6 @@
                                                 )}
                                             </div>
                                         ) : (
-                                            /* CẤU HÌNH THÔNG MINH CHO XÂY KÊNH BDS (MỚI ĐƯỢC ĐỒNG BỘ) */
                                             <div className="space-y-4">
                                                 <div className="flex flex-col gap-1 pb-3 border-b border-zinc-700">
                                                     <span className="block text-xs font-medium text-white">Số lượng video xây kênh cần thực hiện</span>
@@ -1479,7 +1684,6 @@
                                             </div>
                                         )}
 
-                                        {/* CÁC TÙY CHỌN PHỤ TRỢ (FLYCAM & MC MẪU) GIỮ NGUYÊN HOÀN TOÀN */}
                                         <div className="flex items-center justify-between py-1.5 border-b border-zinc-700">
                                             <div>
                                                 <span className="block text-xs font-medium text-white">Bổ sung gói thiết bị Flycam lẻ</span>
@@ -1659,7 +1863,6 @@
                                         </div>
                                     </div>
 
-                                    {/* MỤC MỚI: NHẬP DỊCH VỤ TÙY CHỌN KHÔNG CÓ SẴN TRONG HỆ THỐNG - HỖ TRỢ BỞI TRÍ TUỆ NHÂN TẠO AI */}
                                     <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700 space-y-3">
                                         <div className="flex items-center justify-between border-b border-zinc-700 pb-2">
                                             <label className="block text-xs font-semibold text-zinc-300 uppercase">Dịch vụ tùy chỉnh ngoài hệ thống</label>
@@ -1738,19 +1941,14 @@
                             <button 
                                 onClick={() => {
                                     setShowProposalConfig(!showProposalConfig);
-                                    if(!showProposalConfig) {
-                                        setPreviewMode('PROPOSAL');
-                                    } else {
-                                        setPreviewMode('QUOTE');
-                                    }
                                 }}
                                 className={`w-full font-bold py-3 px-4 rounded-lg transition-all duration-75 text-xs flex items-center justify-center gap-2 shadow-md uppercase tracking-wider ${
                                     showProposalConfig 
-                                    ? "bg-gradient-to-b from-amber-500 to-amber-600 text-black border-b-4 border-amber-700 active:border-b-0 active:translate-y-[2px]" 
-                                    : "bg-gradient-to-b from-zinc-800 to-zinc-900 text-zinc-300 border-b-4 border-zinc-950 active:border-b-0 active:translate-y-[4px] hover:text-white"
+                                    ? "bg-gradient-to-b from-yellow-500 to-yellow-600 text-yellow-950 border-b-4 border-yellow-700 active:border-b-0 active:translate-y-[4px] hover:from-yellow-600 hover:to-yellow-700" 
+                                    : "bg-gradient-to-b from-yellow-100 to-yellow-300 text-yellow-950 border-b-4 border-yellow-400 active:border-b-0 active:translate-y-[4px] hover:from-yellow-50 hover:to-yellow-200"
                                 }`}
                             >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="w-4 h-4 text-yellow-950" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                                 {showProposalConfig ? "ĐÓNG KHUNG CẤU HÌNH PROPOSAL" : "LÀM PROPOSAL (ĐỀ XUẤT Ý TƯỞNG)"}
@@ -1805,55 +2003,74 @@
                                     </div>
                                 </div>
 
-                                {/* Nhập liệu thông tin định hướng */}
-                                <div className="space-y-2.5">
+                                {/* Nhập liệu thông tin định hướng kết hợp các đề xuất trợ lý thông minh */}
+                                <div className="space-y-4">
                                     <div>
-                                        <label className="block text-[10px] text-zinc-400 mb-1">Mục tiêu chiến dịch / dự án</label>
+                                        <label className="block text-xs text-zinc-300 mb-1 font-bold uppercase tracking-wider">Mục tiêu chiến dịch / dự án</label>
                                         <input 
                                             type="text"
                                             value={propObjective}
                                             onChange={(e) => setPropObjective(e.target.value)}
-                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400"
+                                            onFocus={() => setOpenSuggestions(prev => ({ ...prev, objective: true }))}
+                                            onBlur={() => setTimeout(() => setOpenSuggestions(prev => ({ ...prev, objective: false })), 200)}
+                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400 leading-normal"
                                             placeholder="Ví dụ: Đẩy mạnh viral sản phẩm mới, tăng trưởng traffic..."
                                         />
+                                        {renderSuggestionBox('objective', generatedSuggestions.objectives, propObjective, setPropObjective)}
                                     </div>
+
                                     <div>
-                                        <label className="block text-[10px] text-zinc-400 mb-1">Đối tượng người xem mục tiêu</label>
+                                        <label className="block text-xs text-zinc-300 mb-1 font-bold uppercase tracking-wider">Đối tượng người xem mục tiêu</label>
                                         <input 
                                             type="text"
                                             value={propTarget}
                                             onChange={(e) => setPropTarget(e.target.value)}
-                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400"
+                                            onFocus={() => setOpenSuggestions(prev => ({ ...prev, target: true }))}
+                                            onBlur={() => setTimeout(() => setOpenSuggestions(prev => ({ ...prev, target: false })), 200)}
+                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400 leading-normal"
                                             placeholder="Ví dụ: Giới trẻ 18-25, các chủ doanh nghiệp vừa và nhỏ..."
                                         />
+                                        {renderSuggestionBox('target', generatedSuggestions.targets, propTarget, setPropTarget)}
                                     </div>
+
                                     <div>
-                                        <label className="block text-[10px] text-zinc-400 mb-1">Thông điệp cốt lõi truyền tải</label>
+                                        <label className="block text-xs text-zinc-300 mb-1 font-bold uppercase tracking-wider">Thông điệp cốt lõi truyền tải</label>
                                         <input 
                                             type="text"
                                             value={propMessage}
                                             onChange={(e) => setPropMessage(e.target.value)}
-                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400"
+                                            onFocus={() => setOpenSuggestions(prev => ({ ...prev, message: true }))}
+                                            onBlur={() => setTimeout(() => setOpenSuggestions(prev => ({ ...prev, message: false })), 200)}
+                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400 leading-normal"
                                             placeholder="Ví dụ: Khác biệt tinh tế, giải pháp tối ưu cho doanh nghiệp..."
                                         />
+                                        {renderSuggestionBox('message', generatedSuggestions.messages, propMessage, setPropMessage)}
                                     </div>
+
                                     <div>
-                                        <label className="block text-[10px] text-zinc-400 mb-1">Định hướng sản xuất & Visual ý tưởng (Tùy chỉnh)</label>
+                                        <label className="block text-xs text-zinc-300 mb-1 font-bold uppercase tracking-wider">Định hướng sản xuất & Visual ý tưởng (Tùy chỉnh)</label>
                                         <textarea 
                                             value={propDirection}
                                             onChange={(e) => setPropDirection(e.target.value)}
+                                            onFocus={() => setOpenSuggestions(prev => ({ ...prev, direction: true }))}
+                                            onBlur={() => setTimeout(() => setOpenSuggestions(prev => ({ ...prev, direction: false })), 200)}
                                             rows="3"
-                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400"
-                                            placeholder="Để trống hệ thống sẽ tự động đề xuất ý tưởng tối ưu bám sát dòng sản phẩm bạn đang tính giá..."
+                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400 leading-relaxed"
+                                            placeholder="Tự nhập định hướng sản xuất tại đây..."
                                         ></textarea>
+                                        {renderSuggestionBox('direction', generatedSuggestions.directions, propDirection, setPropDirection)}
                                     </div>
+
                                     <div>
-                                        <label className="block text-[10px] text-zinc-400 mb-1">Các điều khoản chung đề xuất</label>
+                                        <label className="block text-xs text-zinc-300 mb-1 font-bold uppercase tracking-wider">Các điều khoản chung đề xuất</label>
                                         <textarea 
                                             value={propTerms}
-                                            onChange={(e) => setPropTerms(e.target.value)}
+                                            onChange={(e) => {
+                                                setPropTerms(e.target.value);
+                                                setIsTermsEdited(true);
+                                            }}
                                             rows="4"
-                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400"
+                                            className="w-full bg-black border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-400 leading-relaxed"
                                         ></textarea>
                                     </div>
                                 </div>
@@ -1977,7 +2194,7 @@
                                             <thead>
                                                 <tr className="bg-slate-900 text-white font-montserrat uppercase tracking-wider text-[10px]">
                                                     <th className="py-2.5 px-3 rounded-l">STT</th>
-                                                    <th className="py-2.5 px-3">Hạng Mực Công Việc</th>
+                                                    <th className="py-2.5 px-3">Hạng Mục Công Việc</th>
                                                     <th className="py-2.5 px-3 text-center">SL</th>
                                                     <th className="py-2.5 px-3 text-right">Đơn Giá</th>
                                                     <th className="py-2.5 px-3 text-right rounded-r">Thành Tiền</th>
@@ -2268,7 +2485,7 @@
                                     {isGeneratingPNG ? "ĐANG TẠO FILE ẢNH..." : `XUẤT ${previewMode === 'QUOTE' ? 'BÁO GIÁ' : 'PROPOSAL'} PNG`}
                                 </button>
                                 <button onClick={handlePrint} disabled={isGeneratingPDF || isGeneratingPNG} className={getExportBtnClass(isGeneratingPDF, true)}>
-                                    {isGeneratingPDF ? "ĐANG KHỔI TẠO FILE PDF..." : `XUẤT ${previewMode === 'QUOTE' ? 'BÁO GIÁ' : 'PROPOSAL'} PDF`}
+                                    {isGeneratingPDF ? "ĐANG KHỞI TẠO FILE PDF..." : `XUẤT ${previewMode === 'QUOTE' ? 'BÁO GIÁ' : 'PROPOSAL'} PDF`}
                                 </button>
                             </div>
                         </div>
@@ -2279,7 +2496,6 @@
             );
         }
 
-        // Khởi động và kết xuất ứng dụng React
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
