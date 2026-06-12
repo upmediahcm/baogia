@@ -50,6 +50,36 @@
             scrollbar-width: none;
         }
 
+        /* Ẩn các nút tăng giảm số trên trường input */
+        .no-spinner::-webkit-outer-spin-button,
+        .no-spinner::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .no-spinner {
+            -moz-appearance: textfield;
+        }
+        
+        /* Thiết kế trường nhập liệu trong suốt phẳng để chỉnh sửa trực tiếp trên tờ A4 */
+        .input-flat {
+            background-color: transparent !important;
+            border-radius: 0px !important;
+            border-top: none !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-bottom: 1px dashed transparent !important;
+            transition: border-color 0.15s ease-in-out;
+            padding: 0px !important;
+        }
+        .input-flat:hover {
+            border-bottom-color: #cbd5e1 !important; /* slate-300 */
+        }
+        .input-flat:focus {
+            border-bottom-color: #6366f1 !important; /* indigo-500 */
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
         /* Lớp phong cách tối ưu hóa độ sắc nét cực đại khi xuất file PDF/PNG - Triệt tiêu mờ nhòe răng cưa */
         .export-crisp {
             -webkit-font-smoothing: antialiased !important;
@@ -171,6 +201,17 @@
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
+
+        // Hàm hỗ trợ làm tròn số về bội số của 1.000đ (Ngăn chặn triệt để số lẻ 1đ, 2đ, 3đ...)
+        function roundToThousand(amount) {
+            return Math.round(amount / 1000) * 1000;
+        }
+
+        // Hàm định dạng tiền tệ Việt Nam (VND) toàn cục đã được tích hợp làm tròn nghìn lẻ
+        function formatVND(amount) {
+            const cleanAmount = roundToThousand(amount);
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cleanAmount);
+        }
 
         function App() {
             // Thông tin nhà cung cấp dịch vụ - BÊN A
@@ -310,7 +351,7 @@
                 if (clientContact && !partyBRep) setPartyBRep(clientContact);
             }, [clientName, clientContact]);
 
-            // Tự động phân tích các dịch vụ đang có thực tế trong báo giá (Để đồng bộ Quy trình & Timeline)
+            // Tự động phân tích các dịch vụ đang có thực tế trong báo giá (Để đồng bộ Quy trình và Timeline)
             const activeQuoteCategories = useMemo(() => {
                 if (invoiceItems.length === 0) {
                     return [activeCategory]; 
@@ -328,7 +369,7 @@
                 return Array.from(cats);
             }, [invoiceItems, activeCategory]);
 
-            // Hàm tự động tạo đề xuất cho Listbox dựa trên Tên dự án & Phân loại dịch vụ đang chọn
+            // Hàm tự động tạo đề xuất cho Listbox dựa trên Tên dự án và Phân loại dịch vụ đang chọn
             const generatedSuggestions = useMemo(() => {
                 const proj = projectName.trim() || "Dự án";
 
@@ -350,8 +391,8 @@
                             `"${proj} - Đơn giản hóa mọi quy trình, khẳng định giá trị chất lượng đỉnh cao."`
                         ],
                         directions: [
-                            `Đặc tả góc quay cận cảnh (extreme close-up) bề mặt chất liệu, cơ chế hoạt động thực tế của sản phẩm. Kết hợp hiệu ứng so sánh trực quan Trước/Sau sử dụng.`,
-                            `Xây dựng kịch bản tình huống đời thường gần gũi (User Generated Content) lồng ghép feedback trải nghiệm thực của diễn viên/mẫu chính.`,
+                            `Đặc tả góc quay cận cảnh (extreme close-up) bề mặt chất liệu, cơ chế hoạt động thực tế của sản phẩm. Kết hợp hiệu ứng so sánh trực quan Trước và Sau sử dụng.`,
+                            `Xây dựng kịch bản tình huống đời thường gần gũi (User Generated Content) lồng ghép feedback trải nghiệm thực của diễn viên hoặc mẫu chính.`,
                             `Ánh sáng studio tươi sáng, rực rỡ, nhấn mạnh khối sản phẩm. Tiết tấu dựng nhanh gọn dưới 45 giây, chèn text motion chú thích tính năng nổi bật.`
                         ]
                     },
@@ -364,7 +405,7 @@
                         targets: [
                             `Cộng đồng người dùng năng động trên TikTok, Reels, Shorts đam mê kiến thức thực tế và giải trí nhanh.`,
                             `Tệp khách hàng tiềm năng cần lời khuyên chuyên môn đáng tin cậy về thị trường của dự án ${proj}.`,
-                            `Thế hệ Gen Z & Millennials có thói quen tìm kiếm thông tin bằng định dạng video ngắn.`
+                            `Thế hệ Gen Z và Millennials có thói quen tìm kiếm thông tin bằng định dạng video ngắn.`
                         ],
                         messages: [
                             `"Đồng hành cùng ${proj} - Chia sẻ bí quyết thông thái, giải pháp vượt trội mỗi ngày."`,
@@ -373,7 +414,7 @@
                         ],
                         directions: [
                             `Định dạng khung dọc 9:16 chuẩn thiết bị di động. Thiết lập cú giật tít thu hút (hook) cực kỳ ấn tượng trong 3 giây đầu tiên của video.`,
-                            `Sử dụng MC/Model thoại tự nhiên, biểu cảm sinh động, góc máy ngang tầm mắt tạo cảm giác trò chuyện thân mật trực tiếp với khán giả.`,
+                            `Sử dụng MC hoặc Model thoại tự nhiên, biểu cảm sinh động, góc máy ngang tầm mắt tạo cảm giác trò chuyện thân mật trực tiếp với khán giả.`,
                             `Thiết kế nhịp dựng nhanh, chèn hiệu ứng Kinetic Typography sinh động, phối âm thanh pop-culture thịnh hành kết hợp sound effect kích thích xúc cảm.`
                         ]
                     },
@@ -394,9 +435,9 @@
                             `"${proj} - Không gian sống hoàn mỹ, tiện ích xứng tầm, nâng tầm trải nghiệm."`
                         ],
                         directions: [
-                            `Sử dụng thiết bị Flycam chuyên dụng bay góc tầm cao toàn cảnh (wide-shots) bám sát quy hoạch, giao thông kết nối thực tế dự án.`,
+                            `Sử dụng thiết bị Flycam chuyên dụng bay góc toàn cảnh tầm cao bám sát quy hoạch, giao thông kết nối thực tế dự án.`,
                             `Góc máy mặt đất dùng lens Anamorphic cinematic di chuyển chậm dọc hành lang, đặc tả không gian nội thất sang trọng chuẩn 5 sao.`,
-                            `Phối tông màu Amber & Teal ấm áp, quý phái. Âm nhạc giao hưởng hoành tráng kết hợp giọng thu âm MC trầm ấm lồng tiếng giới thiệu chi tiết.`
+                            `Phối tông màu Amber và Teal ấm áp, quý phái. Âm nhạc giao hưởng hoành tráng kết hợp giọng thu âm MC trầm ấm lồng tiếng giới thiệu chi tiết.`
                         ]
                     },
                     EVENT: {
@@ -505,7 +546,7 @@
                 return generatedSuggestions.directions[0];
             }, [generatedSuggestions, propDirection]);
 
-            // --- KHỞI TẠO BIẾN TRƯỚC KHI TÍNH TOÁN (Khắc phục lỗi thứ tự biến) ---
+            // --- KHỞI TẠO BIẾN TRƯỚC KHI TÍNH TOÁN ---
             const finalQuoteItems = useMemo(() => {
                 return invoiceItems;
             }, [invoiceItems]);
@@ -515,11 +556,11 @@
             }, [finalQuoteItems]);
 
             const discountAmount = useMemo(() => {
-                return (subtotal * discountPercent) / 100;
+                return roundToThousand((subtotal * discountPercent) / 100);
             }, [subtotal, discountPercent]);
 
             const vatAmount = useMemo(() => {
-                return ((subtotal - discountAmount) * vatPercent) / 100;
+                return roundToThousand(((subtotal - discountAmount) * vatPercent) / 100);
             }, [subtotal, discountAmount, vatPercent]);
 
             const grandTotal = useMemo(() => {
@@ -536,6 +577,29 @@
                     setPropTerms(termStandard + commonTerms);
                 }
             }, [grandTotal, isTermsEdited]);
+
+            // Hàm xử lý cập nhật trực tiếp từng hạng mục báo giá từ tờ A4
+            const updateInvoiceItem = (id, field, value) => {
+                setInvoiceItems(prev => prev.map(item => {
+                    if (item.id === id) {
+                        const updated = { ...item };
+                        if (field === 'qty') {
+                            updated.qty = Math.max(1, parseInt(value) || 0);
+                            updated.subtotal = updated.qty * updated.unitPrice;
+                        } else if (field === 'unitPrice') {
+                            // Tránh hoàn toàn số lẻ bằng cách làm tròn đơn giá cập nhật về hàng nghìn
+                            updated.unitPrice = roundToThousand(parseInt(value) || 0);
+                            updated.subtotal = updated.qty * updated.unitPrice;
+                        } else if (field === 'name') {
+                            updated.name = value;
+                        } else if (field === 'desc') {
+                            updated.desc = value;
+                        }
+                        return updated;
+                    }
+                    return item;
+                }));
+            };
 
             // Xử lý tương tác thông minh khi click đổi dòng sản phẩm
             const handleCategoryClick = (category) => {
@@ -577,7 +641,7 @@ Yêu cầu bắt buộc:
   "objective": "Mục tiêu chiến dịch (1 câu rõ ràng, chuyên nghiệp, súc tích)",
   "target": "Khách hàng mục tiêu (1 câu phân tích sâu hành vi và phân khúc phù hợp)",
   "message": "Thông điệp cốt lõi (1 câu slogan/quote đặt trong dấu ngoặc kép)",
-  "direction": "Định hướng sản xuất & Visual ý tưởng (Mô tả nghệ thuật sâu sắc về bối cảnh, góc máy, ánh sáng, nhịp dựng, âm nhạc phù hợp với sản phẩm này)"
+  "direction": "Định hướng sản xuất và Visual ý tưởng (Mô tả nghệ thuật sâu sắc về bối cảnh, góc máy, ánh sáng, nhịp dựng, âm nhạc phù hợp với sản phẩm này)"
 }
 3. Tuyệt đối không trả về bất kỳ từ dẫn dắt nào ngoài mã JSON.`;
 
@@ -996,8 +1060,8 @@ Yêu cầu bắt buộc:
                         const quayQty = isSmall ? 1 : qcDays;
                         items.push({
                             id: 'qc_quay',
-                            name: isSmall ? "Chi phí quay cố định (gồm quay phim & thiết bị)" : `Chi phí quay phim quảng cáo (${qcDays} ngày quay)`,
-                            desc: isSmall ? "Trọn gói thiết bị, ánh sáng, nhân sự quay phim cơ bản cho 1-2 clips." : `Ekip quay chuyên nghiệp, camera Sony cao cấp & ánh sáng đầy đủ. Đơn giá: 3.000.000 đ/ngày.`,
+                            name: isSmall ? "Chi phí quay cố định (gồm quay phim và thiết bị)" : `Chi phí quay phim quảng cáo (${qcDays} ngày quay)`,
+                            desc: isSmall ? "Trọn gói thiết bị, ánh sáng, nhân sự quay phim cơ bản cho 1-2 clips." : `Ekip quay chuyên nghiệp, camera Sony cao cấp và ánh sáng đầy đủ. Đơn giá: 3.000.000 đ/ngày.`,
                             qty: quayQty,
                             unitPrice: quayPrice,
                             subtotal: quayQty * quayPrice
@@ -1095,7 +1159,7 @@ Yêu cầu bắt buộc:
 
                     items.push({
                         id: 'xk_quay',
-                        name: "Quay phim & Thiết bị bối cảnh (" + pkgTitle + ")",
+                        name: "Quay phim và Thiết bị bối cảnh (" + pkgTitle + ")",
                         desc: "Nhân sự quay cùng hệ thống máy Sony chuyên dụng bối cảnh thực tế.",
                         qty: 1,
                         unitPrice: quayPrice,
@@ -1105,7 +1169,7 @@ Yêu cầu bắt buộc:
                     items.push({
                         id: 'xk_dung',
                         name: "Hậu kỳ dựng clip video hoàn thiện (" + pkgTitle + ")",
-                        desc: "Cắt ghép, tinh chỉnh nhịp, chuyển cảnh, hiệu ứng âm thanh & nhạc thương mại.",
+                        desc: "Cắt ghép, tinh chỉnh nhịp, chuyển cảnh, hiệu ứng âm thanh và nhạc thương mại.",
                         qty: qty,
                         unitPrice: dungPrice,
                         subtotal: qty * dungPrice
@@ -1114,7 +1178,7 @@ Yêu cầu bắt buộc:
                     if (isCaoCap) {
                         items.push({
                             id: 'xk_quan_ly',
-                            name: "Dịch vụ quản lý & Tối ưu kênh phân phối",
+                            name: "Dịch vụ quản lý và Tối ưu kênh phân phối",
                             desc: "Hỗ trợ chuẩn hóa thông tin kênh, đăng tải nội dung chuẩn khung giờ vàng, seeding ban đầu định hướng và báo cáo phân tích hiệu suất.",
                             qty: 1,
                             unitPrice: 3000000,
@@ -1240,7 +1304,7 @@ Yêu cầu bắt buộc:
                     if (bdsFlycamDays > 0) {
                         items.push({
                             id: 'bds_flycam',
-                            name: "Thiết bị & Nhân sự Flycam chuyên nghiệp",
+                            name: "Thiết bị và Nhân sự Flycam chuyên nghiệp",
                             desc: "Góc quay không trung bao quát toàn bộ tiến độ, vị trí địa lý dự án tầm cao. Đơn giá cố định: 2.000.000đ/ngày (Chưa bao gồm giấy phép).",
                             qty: bdsFlycamDays,
                             unitPrice: 2000000,
@@ -1334,7 +1398,7 @@ Yêu cầu bắt buộc:
                     if (eventFlycamDays > 0) {
                         items.push({
                             id: 'event_flycam',
-                            name: "Thiết bị & Nhân sự Flycam sự kiện bổ sung",
+                            name: "Thiết bị và Nhân sự Flycam sự kiện bổ sung",
                             desc: "Góc quay không trung bao quát toàn cảnh sự kiện tầm cao bằng Flycam chuyên dụng. Đơn giá cố định: 2.000.000 đ / ngày (Chưa gồm giấy phép).",
                             qty: eventFlycamDays,
                             unitPrice: 2000000,
@@ -1413,7 +1477,7 @@ Yêu cầu bắt buộc:
                         const scriptPrice = Math.min(2000000, tvcBudget);
                         items.push({
                             id: 'tvc_kb',
-                            name: "Biên soạn Kịch bản & Vẽ Storyboard phân cảnh chi tiết",
+                            name: "Biên soạn Kịch bản và Vẽ Storyboard phân cảnh chi tiết",
                             desc: "Xây dựng ý tưởng thông điệp cốt lõi, viết kịch bản văn học, kịch bản phân cảnh kỹ thuật và phác thảo Storyboard trực quan.",
                             qty: 1,
                             unitPrice: scriptPrice,
@@ -1422,16 +1486,17 @@ Yêu cầu bắt buộc:
 
                         const remaining = tvcBudget - scriptPrice;
                         if (remaining > 0) {
-                            const directorPrice = Math.round(remaining * 0.15);
-                            const crewPrice = Math.round(remaining * 0.20);
-                            const equipPrice = Math.round(remaining * 0.15);
-                            const talentPrice = Math.round(remaining * 0.25);
-                            const postPrice = Math.round(remaining * 0.20);
+                            // Tự động phân bổ và làm tròn chẵn theo hàng nghìn đồng (Chống hoàn toàn số lẻ đợt tính % ngân sách)
+                            const directorPrice = roundToThousand(remaining * 0.15);
+                            const crewPrice = roundToThousand(remaining * 0.20);
+                            const equipPrice = roundToThousand(remaining * 0.15);
+                            const talentPrice = roundToThousand(remaining * 0.25);
+                            const postPrice = roundToThousand(remaining * 0.20);
                             const contingencyPrice = remaining - (directorPrice + crewPrice + equipPrice + talentPrice + postPrice); 
 
                             items.push({
                                 id: 'tvc_director',
-                                name: "Đạo diễn chỉ đạo nghệ thuật & Ê-kíp sáng tạo (Director & AD)",
+                                name: "Đạo diễn chỉ đạo nghệ thuật và Ê-kíp sáng tạo (Director và AD)",
                                 desc: "Đạo diễn chính chịu trách nhiệm kiểm soát nghệ thuật, chỉ dẫn diễn xuất, kiểm duyệt bối cảnh và điều phối toàn bộ tổ kỹ thuật sản xuất.",
                                 qty: 1,
                                 unitPrice: directorPrice,
@@ -1440,7 +1505,7 @@ Yêu cầu bắt buộc:
 
                             items.push({
                                 id: 'tvc_crew',
-                                name: "Nhân sự Quay phim & Tổ chức sản xuất (DOP, CamOp, Producer)",
+                                name: "Nhân sự Quay phim và Tổ chức sản xuất (DOP, CamOp, Producer)",
                                 desc: "Giám đốc hình ảnh (DOP), quay phim chính, trợ lý máy (Focus Puller), tổ ánh sáng (Gaffer/Grip) và giám sát sản xuất điều phối logistic hiện trường.",
                                 qty: 1,
                                 unitPrice: crewPrice,
@@ -1449,8 +1514,8 @@ Yêu cầu bắt buộc:
 
                             items.push({
                                 id: 'tvc_equip',
-                                name: "Hệ thống thiết bị camera điện ảnh & Ánh sáng chuyên dụng",
-                                desc: "Dòng máy quay Cinema chuẩn 4K-RAW (Sony FX6/ARRI/RED), dàn ống kính Cine cao cấp, hệ thống đèn led & flash công suất cao, thiết bị chống rung Ronin 2.",
+                                name: "Hệ thống thiết bị camera điện ảnh và Ánh sáng chuyên dụng",
+                                desc: "Dòng máy quay Cinema chuẩn 4K-RAW (Sony FX6/ARRI/RED), dàn ống kính Cine cao cấp, hệ thống đèn led và flash công suất cao, thiết bị chống rung Ronin 2.",
                                 qty: 1,
                                 unitPrice: equipPrice,
                                 subtotal: equipPrice
@@ -1458,7 +1523,7 @@ Yêu cầu bắt buộc:
 
                             items.push({
                                 id: 'tvc_talent',
-                                name: "Diễn viên (Cast/Talent), Trang điểm (MUA) & Phục trang bối cảnh",
+                                name: "Diễn viên (Cast/Talent), Trang điểm (MUA) và Phục trang bối cảnh",
                                 desc: "Tuyển chọn diễn viên chính/phụ phù hợp concept thương hiệu, chuyên viên trang điểm tạo hình nhân vật, chuẩn bị trang phục thiết kế.",
                                 qty: 1,
                                 unitPrice: talentPrice,
@@ -1477,7 +1542,7 @@ Yêu cầu bắt buộc:
                             if (contingencyPrice > 0) {
                                 items.push({
                                     id: 'tvc_contingency',
-                                    name: "Chi phí dự phòng phát sinh & Quản lý vận hành dự án",
+                                    name: "Chi phí dự phòng phát sinh và Quản lý vận hành dự án",
                                     desc: "Dự phòng rủi ro điều kiện thời tiết, bối cảnh, đạo cụ đạo cụ đặc biệt, bản quyền lưu kho và chi phí quản lý điều phối chung.",
                                     qty: 1,
                                     unitPrice: contingencyPrice,
@@ -1502,7 +1567,7 @@ Yêu cầu bắt buộc:
                     if (dlQuayOption === 'HALF_DAY') {
                         items.push({
                             id: 'dl_quay_phim',
-                            name: "Quay Phim & Thiết Bị Lẻ (Nửa ngày)",
+                            name: "Quay Phim và Thiết Bị Lẻ (Nửa ngày)",
                             desc: "Nhân sự kỹ thuật cùng trang thiết bị quay phim chuyên dụng trong vòng 4 tiếng.",
                             qty: 1,
                             unitPrice: 2000000,
@@ -1511,7 +1576,7 @@ Yêu cầu bắt buộc:
                     } else if (dlQuayOption === 'FULL_DAY') {
                         items.push({
                             id: 'dl_quay_phim',
-                            name: "Quay Phim & Thiết Bị Lẻ (Nguyên ngày)",
+                            name: "Quay Phim và Thiết Bị Lẻ (Nguyên ngày)",
                             desc: "Nhân sự kỹ thuật cùng trang thiết bị quay phim chuyên dụng trong vòng 8 tiếng.",
                             qty: 1,
                             unitPrice: 3000000,
@@ -1525,7 +1590,7 @@ Yêu cầu bắt buộc:
                             name: "Dựng video hoàn thiện lẻ",
                             desc: "Hậu kỳ, cắt ghép, chỉnh màu sắc, hiệu ứng hình ảnh và âm thanh thương mại.",
                             qty: dlDungQty,
-                            unitPrice: 300000,
+                            unitPrice: 300000, 
                             subtotal: dlDungQty * 300000
                         });
                     }
@@ -1561,8 +1626,8 @@ Yêu cầu bắt buộc:
                         name: dlCustomName.trim(),
                         desc: dlCustomDesc.trim() || "Dịch vụ phát sinh ngoài hệ thống cấu hình theo yêu cầu thực tế của đối tác.",
                         qty: 1,
-                        unitPrice: dlCustomPrice,
-                        subtotal: dlCustomPrice
+                        unitPrice: roundToThousand(dlCustomPrice), 
+                        subtotal: roundToThousand(dlCustomPrice)
                     });
                 }
 
@@ -1575,7 +1640,7 @@ Yêu cầu bắt buộc:
                 };
             }, [activeCategory, qcClipQty, qcMauQty, qcExtraMauQty, xkPackage, xkModelNoVoiceDays, xkModelVoiceDays, bdsSubCategory, bdsKichBanQty, bdsDungQty, bdsQuayDays, bdsFlycamDays, bdsMauDays, eventPackage, eventDuration, eventFlycamDays, ttProductQty, ttStudioQty, dlQuayOption, dlDungQty, dlKichBanQty, dlMauOption, dlMauQty, bdsQcVideoQty, bdsXkVideoQty, dlCustomName, dlCustomPrice, dlCustomDesc, tvcBudget]);
 
-            // --- HELPER BUILDERS TRÁNH LỖI BIÊN DỊCH JAVASCRIPT/BABEL ---
+            // --- HELPER BUILDERS TRÁNH LỖI BIÊN JAVASCRIPT/BABEL ---
             const getTabClass = (category) => {
                 const active = activeCategory === category;
                 return "py-3 px-2 rounded-lg text-xs font-bold tracking-wider transition-all duration-75 uppercase " + 
@@ -1626,7 +1691,7 @@ Yêu cầu bắt buộc:
             const getExportBtnClass = (isGenerating, isPdf) => {
                 const base = "font-bold py-3 px-6 rounded-lg transition-all duration-75 text-xs flex items-center gap-2 shadow-lg active:translate-y-[4px] ";
                 if (isGenerating) {
-                    return base + "bg-zinc-850 text-zinc-500 cursor-not-allowed border-b-0";
+                    return base + "bg-zinc-855 text-zinc-500 cursor-not-allowed border-b-0";
                 }
                 if (isPdf) {
                     return base + "bg-gradient-to-b from-zinc-100 to-zinc-300 text-zinc-950 border-b-4 border-zinc-500 active:border-b-0 hover:from-white hover:to-zinc-200 shadow-zinc-400/10";
@@ -1635,42 +1700,37 @@ Yêu cầu bắt buộc:
                 }
             };
 
-            // Công cụ định dạng tiền tệ Việt Nam (VND)
-            const formatVND = (amount) => {
-                return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-            };
-
             // Hàm kết xuất đồ họa Timeline trực quan động bám sát các dịch vụ thực tế trong báo giá
             const renderTimeline = (tone) => {
                 const singleCategoryTemplates = {
                     QUANG_CAO: [
-                        { title: "Giai đoạn 1: Brief & Kịch Bản Quảng Cáo", desc: "Thống nhất thông điệp sản phẩm thương mại, viết kịch bản phân cảnh chi tiết và chuẩn bị lời thoại.", duration: "Ngày 1 - 3" },
-                        { title: "Giai đoạn 2: Casting & Setup Tiền Kỳ", desc: "Lựa chọn bối cảnh quay, casting diễn viên/mẫu phù hợp, thiết lập thiết bị camera.", duration: "Ngày 4 - 5" },
+                        { title: "Giai đoạn 1: Brief và Kịch Bản Quảng Cáo", desc: "Thống nhất thông điệp sản phẩm thương mại, viết kịch bản phân cảnh chi tiết và chuẩn bị lời thoại.", duration: "Ngày 1 - 3" },
+                        { title: "Giai đoạn 2: Casting và Setup Tiền Kỳ", desc: "Lựa chọn bối cảnh quay, casting diễn viên/mẫu phù hợp, thiết lập thiết bị camera.", duration: "Ngày 4 - 5" },
                         { title: "Giai đoạn 3: Sản Xuất Quay Hình", desc: "Triển khai bấm máy tại hiện trường, ghi hình các góc máy đặc tả sản phẩm và bối cảnh.", duration: "Ngày 6 - 7" },
-                        { title: "Giai đoạn 4: Hậu Kỳ & Bàn Giao Video", desc: "Dựng thô, chỉnh màu sắc thương mại, chèn nhạc nền bản quyền, hoàn thiện và bàn giao.", duration: "Ngày 8 - 10" }
+                        { title: "Giai đoạn 4: Hậu Kỳ và Bàn Giao Video", desc: "Dựng thô, chỉnh màu sắc thương mại, chèn nhạc nền bản quyền, hoàn thiện và bàn giao.", duration: "Ngày 8 - 10" }
                     ],
                     XAY_KENH: [
-                        { title: "Giai đoạn 1: Lên Ý Tưởng & Kịch Bản Xây Kênh", desc: "Nghiên cứu thị trường và lên danh sách chủ đề kịch bản chi tiết tuần tự cho gói tháng.", duration: "Tuần 1" },
+                        { title: "Giai đoạn 1: Lên Ý Tưởng và Kịch Bản Xây Kênh", desc: "Nghiên cứu thị trường và lên danh sách chủ đề kịch bản chi tiết tuần tự cho gói tháng.", duration: "Tuần 1" },
                         { title: "Giai đoạn 2: Bấm Máy Quay Cuốn Chiếu", desc: "Sản xuất ghi hình tập trung các kịch bản tại bối cảnh studio bám sát lịch phân vai.", duration: "Tuần 2" },
                         { title: "Giai đoạn 3: Biên Tập Hậu Kỳ Video Ngắn", desc: "Cắt dựng nhịp mượt, chèn hiệu ứng Kinetic chữ động, nhạc xu hướng giữ chân người xem.", duration: "Tuần 3" },
-                        { title: "Giai đoạn 4: Nghiệm Thu & Tối Ưu Kênh", desc: "Chuẩn hóa định dạng xuất Ultra-HD, hỗ trợ tư vấn khung giờ vàng đăng tải nội dung.", duration: "Tuần 4" }
+                        { title: "Giai đoạn 4: Nghiệm Thu và Tối Ưu Kênh", desc: "Chuẩn hóa định dạng xuất Ultra-HD, hỗ trợ tư vấn khung giờ vàng đăng tải nội dung.", duration: "Tuần 4" }
                     ],
                     QUAY_BDS: [
                         { title: "Giai đoạn 1: Khảo Sát Bối Cảnh BDS", desc: "Khảo sát thực địa bối cảnh dự án bất động sản, hướng nắng và lập sơ đồ bay máy.", duration: "Ngày 1 - 2" },
-                        { title: "Giai đoạn 2: Quay Source & Flycam", desc: "Bấm máy quay góc mặt đất kết hợp điều phối Flycam lấy bao quát quy mô tầm cao của dự án.", duration: "Ngày 3 - 4" },
+                        { title: "Giai đoạn 2: Quay Source và Flycam", desc: "Bấm máy quay góc mặt đất kết hợp điều phối Flycam lấy bao quát quy mô tầm cao của dự án.", duration: "Ngày 3 - 4" },
                         { title: "Giai đoạn 3: Hậu Kỳ Chuyên Sâu BDS", desc: "Áp dụng kỹ thuật căn màu sắc điện ảnh sang trọng, thu âm lồng tiếng MC giới thiệu tiện ích.", duration: "Ngày 5 - 7" },
                         { title: "Giai đoạn 4: Nghiệm Thu Bàn Giao", desc: "Duyệt clip thô, tối ưu các góc chỉnh theo yêu cầu thực tế và đóng gói bàn giao.", duration: "Ngày 8" }
                     ],
                     EVENT: [
                         { title: "Giai đoạn 1: Khớp Timeline Sự Kiện", desc: "Tiếp nhận sơ đồ, kịch bản chương trình từ ban tổ chức để chuẩn bị góc máy quay chụp sẵn sàng.", duration: "Trước 1 ngày" },
                         { title: "Giai đoạn 2: Tác Nghiệp Hiện Trường", desc: "Quay/chụp bám sát toàn bộ hoạt động chính, ghi nhận tự nhiên các khoảnh khắc cảm xúc chân thực.", duration: "Ngày diễn ra" },
-                        { title: "Giai đoạn 3: Hậu Kỳ Recap & Lọc Ảnh", desc: "Lọc album ảnh chỉnh màu và dựng video recap cô đọng có cao trào, phối nhạc sôi động.", duration: "Ngày 1 - 2" },
-                        { title: "Giai đoạn 4: Bàn Giao File Final", desc: "Đóng gói toàn bộ tài nguyên chất lượng cao lên drive lưu trữ and bàn giao cho ban tổ chức.", duration: "Ngày 3 - 4" }
+                        { title: "Giai đoạn 3: Hậu Kỳ Recap và Lọc Ảnh", desc: "Lọc album ảnh chỉnh màu và dựng video recap cô đọng có cao trào, phối nhạc sôi động.", duration: "Ngày 1 - 2" },
+                        { title: "Giai đoạn 4: Bàn Giao File Final", desc: "Đóng gói toàn bộ tài nguyên chất lượng cao lên drive lưu trữ và bàn giao cho ban tổ chức.", duration: "Ngày 3 - 4" }
                     ],
                     THOI_TRANG: [
                         { title: "Giai đoạn 1: Moodboard Ý Tưởng Lookbook", desc: "Thống nhất concept, chuẩn bị layout makeup, bối cảnh studio và phân phối trang phục.", duration: "Ngày 1 - 2" },
                         { title: "Giai đoạn 2: Tác Nghiệp Studio / On-Set", desc: "Thực hiện quay cuốn chi tiết sản phẩm thời trang cùng người mẫu chuyên nghiệp.", duration: "Ngày 3 - 4" },
-                        { title: "Giai đoạn 3: Hậu Kỳ & Căn Màu Vải", desc: "Dựng nhịp mượt chuẩn phong cách high-fashion, căn chỉnh chính xác màu sắc thớ vải.", duration: "Ngày 5 - 6" },
+                        { title: "Giai đoạn 3: Hậu Kỳ và Căn Màu Vải", desc: "Dựng nhịp mượt chuẩn phong cách high-fashion, căn chỉnh chính xác màu sắc thớ vải.", duration: "Ngày 5 - 6" },
                         { title: "Giai đoạn 4: Bàn Giao Nghiệm Thu", desc: "Xuất file chuẩn màu thương mại sắc nét Ultra-HD phục vụ chiến dịch ra mắt bộ sưu tập.", duration: "Ngày 7" }
                     ],
                     DICH_VU_LE: [
@@ -1680,10 +1740,10 @@ Yêu cầu bắt buộc:
                         { title: "Giai đoạn 4: Bàn Giao Nghiệm Thu", desc: "Duyệt demo thô, hoàn thiện chỉnh sửa theo thỏa thuận và bàn giao file cuối cùng.", duration: "Ngày 6" }
                     ],
                     PHIM_TVC: [
-                        { title: "Giai đoạn 1: Nghiên cứu, Concept & Storyboard", desc: "Nghiên cứu sâu định vị thương hiệu, biên soạn 3 hướng concept ý tưởng, hoàn thiện kịch bản văn học & kịch bản phân cảnh kỹ thuật, phác thảo Storyboard trực quan.", duration: "Ngày 1 - 5" },
-                        { title: "Giai đoạn 2: Tiền kỳ tổng lực & Casting & PPM", desc: "Tuyển chọn diễn viên chính/phụ, tìm kiếm và khảo sát bối cảnh thực tế, chuẩn bị đạo cụ, thiết kế makeup layout & chuẩn bị phục trang. Tổ chức họp PPM (Pre-Production Meeting) thống nhất triệt để trước khi bấm máy.", duration: "Ngày 6 - 10" },
+                        { title: "Giai đoạn 1: Nghiên cứu, Concept và Storyboard", desc: "Nghiên cứu sâu định vị thương hiệu, biên soạn 3 hướng concept ý tưởng, hoàn thiện kịch bản văn học và kịch bản phân cảnh kỹ thuật, phác thảo Storyboard trực quan.", duration: "Ngày 1 - 5" },
+                        { title: "Giai đoạn 2: Tiền kỳ tổng lực và Casting và PPM", desc: "Tuyển chọn diễn viên chính/phụ, tìm kiếm và khảo sát bối cảnh thực tế, chuẩn bị đạo cụ, thiết kế makeup layout và chuẩn bị phục trang. Tổ chức họp PPM (Pre-Production Meeting) thống nhất triệt để trước khi bấm máy.", duration: "Ngày 6 - 10" },
                         { title: "Giai đoạn 3: Bấm máy sản xuất (Production Days)", desc: "Tiến hành ghi hình TVC thực tế tại hiện trường với đạo diễn, DOP, dàn Cast chuyên nghiệp cùng hệ thống máy quay điện ảnh, ống kính và dàn ánh sáng chuyên dụng công suất lớn.", duration: "Ngày 11 - 13" },
-                        { title: "Giai đoạn 4: Hậu kỳ chuyên sâu, VFX, grading & Bàn giao", desc: "Dựng thô nhịp phim (Offline), tiến hành thiết kế kỹ xảo điện ảnh (VFX/Online), chỉnh màu Color Grading chuẩn phim rạp, thiết kế âm thanh Sound Design chuyên sâu và thu âm giọng lồng tiếng MC thương mại.", duration: "Ngày 14 - 18" }
+                        { title: "Giai đoạn 4: Hậu kỳ chuyên sâu, VFX, grading và Bàn giao", desc: "Dựng thô nhịp phim (Offline), tiến hành thiết kế kỹ xảo điện ảnh (VFX/Online), chỉnh màu Color Grading chuẩn phim rạp, thiết kế âm thanh Sound Design chuyên sâu và thu âm giọng lồng tiếng MC thương mại.", duration: "Ngày 14 - 18" }
                     ]
                 };
 
@@ -1702,22 +1762,22 @@ Yêu cầu bắt buộc:
 
                     stepsToRender = [
                         { 
-                            title: "Giai đoạn 1: Nghiên cứu & Tiền kỳ tổng hợp", 
+                            title: "Giai đoạn 1: Nghiên cứu và Tiền kỳ tổng hợp", 
                             desc: `Xây dựng ý tưởng kịch bản và kế hoạch triển khai đồng loạt cho các hạng mục: ${categoryNames}. Setup nhân sự, chuẩn bị bối cảnh nhất quán để tối ưu chi phí.`, 
                             duration: "Ngày 1 - 4" 
                         },
                         { 
-                            title: "Giai đoạn 2: Tác nghiệp & Sản xuất quay hình", 
+                            title: "Giai đoạn 2: Tác nghiệp và Sản xuất quay hình", 
                             desc: "Triển khai ekip quay phim hiện trường, điều phối diễn viên/người mẫu, sử dụng các thiết bị ghi hình mặt đất chuyên dụng và bay Flycam theo cấu hình đã phê duyệt.", 
                             duration: "Ngày 5 - 7" 
                         },
                         { 
-                            title: "Giai đoạn 3: Hậu kỳ & Biên tập kỹ thuật đồng bộ", 
+                            title: "Giai đoạn 3: Hậu kỳ và Biên tập kỹ thuật đồng bộ", 
                             desc: "Xử lý cắt dựng thô, căn chỉnh màu sắc hài hòa đúng tinh thần nhận diện. Lồng tiếng MC chuyên nghiệp, lồng nhạc bản quyền thương mại và bổ sung hiệu ứng visual.", 
                             duration: "Ngày 8 - 12" 
                         },
                         { 
-                            title: "Giai đoạn 4: Nghiệm thu demo & Bàn giao toàn bộ", 
+                            title: "Giai đoạn 4: Nghiệm thu demo và Bàn giao toàn bộ", 
                             desc: "Tiến hành gửi bản duyệt demo tổng hợp, tiếp nhận các phản hồi điều chỉnh tối ưu và đóng gói bàn giao toàn bộ gói thành phẩm đạt chất lượng Ultra-HD sắc nét.", 
                             duration: "Ngày 13 - 15" 
                         }
@@ -1819,6 +1879,9 @@ Yêu cầu bắt buộc:
                 }
             };
 
+            // Xác định xem có đang ở chế độ xem/sửa bình thường không (Nếu đang xuất file thì khoá hoàn toàn input để tránh viền vỡ)
+            const isEditing = !isGeneratingPDF && !isGeneratingPNG;
+
             return (
                 <div className="flex-grow flex flex-col md:flex-row min-h-screen relative overflow-x-hidden bg-black text-zinc-100">
                     
@@ -1901,7 +1964,7 @@ Yêu cầu bắt buộc:
                         {/* Customer Info Section */}
                         <div className="mb-6 bg-zinc-800 p-4 rounded-xl border border-zinc-800">
                             <h3 className="text-xs font-semibold tracking-wider text-zinc-200 uppercase mb-3 flex items-center gap-2 border-b border-zinc-700 pb-2">
-                                Thông Tin Khách Hàng & Dự Án
+                                Thông Tin Khách Hàng và Dự Án
                             </h3>
                             <div className="grid grid-cols-1 gap-3 text-sm">
                                 <div>
@@ -1961,7 +2024,7 @@ Yêu cầu bắt buộc:
                             
                             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                                 <h2 className="text-sm font-bold font-montserrat text-white">
-                                    Cấu Hình: {activeCategory === 'DICH_VU_LE' ? 'DỊCH VỤ LẺ' : activeCategory === 'PHIM_TVC' ? 'PHIM TVC' : activeCategory.replace('_', ' ')}
+                                    Cấu Hì̀nh: {activeCategory === 'DICH_VU_LE' ? 'DỊCH VỤ LẺ' : activeCategory === 'PHIM_TVC' ? 'PHIM TVC' : activeCategory.replace('_', ' ')}
                                 </h2>
                                 <span className="text-xs bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded font-medium border border-zinc-700">
                                     Giá tạm tính: <strong className="text-zinc-200">{formatVND(activeCalculation.total)}</strong>
@@ -1981,8 +2044,9 @@ Yêu cầu bắt buộc:
                                                 <input 
                                                     type="number" 
                                                     min="5000000" 
+                                                    step="1000"
                                                     value={tvcBudget} 
-                                                    onChange={(e) => setTvcBudget(Math.max(0, parseInt(e.target.value) || 0))} 
+                                                    onChange={(e) => setTvcBudget(roundToThousand(Math.max(0, parseInt(e.target.value) || 0)))} 
                                                     className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2.5 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-500 font-mono tracking-wide" 
                                                     placeholder="Nhập tổng ngân sách TVC..."
                                                 />
@@ -1993,44 +2057,44 @@ Yêu cầu bắt buộc:
                                         <div className="space-y-2 pt-2 border-t border-zinc-700 text-[11px] text-zinc-400">
                                             <span className="block text-[10px] font-bold text-zinc-300 uppercase tracking-wider mb-1">Cơ cấu dự án bóc tách tự động:</span>
                                             <div className="flex justify-between border-b border-zinc-850 py-1">
-                                                <span>Kịch bản & Storyboard (Cố định):</span>
+                                                <span>Kịch bản và Storyboard (Cố định):</span>
                                                 <span className="font-bold text-zinc-300">{formatVND(Math.min(2000000, tvcBudget))}</span>
                                             </div>
                                             {tvcBudget > 2000000 && (
-                                                <React.Fragment>
+                                                <>
                                                     <div className="flex justify-between border-b border-zinc-850 py-1">
-                                                        <span>Đạo diễn & AD chỉ đạo (15%):</span>
-                                                        <span className="font-bold text-zinc-300">{formatVND(Math.round((tvcBudget - 2000000) * 0.15))}</span>
+                                                        <span>Đạo diễn và AD chỉ đạo (15%):</span>
+                                                        <span className="font-bold text-zinc-300">{formatVND(roundToThousand((tvcBudget - 2000000) * 0.15))}</span>
                                                     </div>
                                                     <div className="flex justify-between border-b border-zinc-850 py-1">
-                                                        <span>Quay phim & Ê-kíp sản xuất (20%):</span>
-                                                        <span className="font-bold text-zinc-300">{formatVND(Math.round((tvcBudget - 2000000) * 0.20))}</span>
+                                                        <span>Quay phim và Ê-kíp sản xuất (20%):</span>
+                                                        <span className="font-bold text-zinc-300">{formatVND(roundToThousand((tvcBudget - 2000000) * 0.20))}</span>
                                                     </div>
                                                     <div className="flex justify-between border-b border-zinc-850 py-1">
-                                                        <span>Máy quay Cinema & Ánh sáng (15%):</span>
-                                                        <span className="font-bold text-zinc-300">{formatVND(Math.round((tvcBudget - 2000000) * 0.15))}</span>
+                                                        <span>Máy quay Cinema và Ánh sáng (15%):</span>
+                                                        <span className="font-bold text-zinc-300">{formatVND(roundToThousand((tvcBudget - 2000000) * 0.15))}</span>
                                                     </div>
                                                     <div className="flex justify-between border-b border-zinc-850 py-1">
-                                                        <span>Diễn viên & Phục trang & Makeup (25%):</span>
-                                                        <span className="font-bold text-zinc-300">{formatVND(Math.round((tvcBudget - 2000000) * 0.25))}</span>
+                                                        <span>Diễn viên và Phục trang và Makeup (25%):</span>
+                                                        <span className="font-bold text-zinc-300">{formatVND(roundToThousand((tvcBudget - 2000000) * 0.25))}</span>
                                                     </div>
                                                     <div className="flex justify-between border-b border-zinc-850 py-1">
-                                                        <span>Hậu kỳ chuyên sâu, VFX & Grading (20%):</span>
-                                                        <span className="font-bold text-zinc-300">{formatVND(Math.round((tvcBudget - 2000000) * 0.20))}</span>
+                                                        <span>Hậu kỳ chuyên sâu, VFX và Grading (20%):</span>
+                                                        <span className="font-bold text-zinc-300">{formatVND(roundToThousand((tvcBudget - 2000000) * 0.20))}</span>
                                                     </div>
                                                     <div className="flex justify-between py-1">
-                                                        <span>Chi phí dự phòng & Logistic (5%):</span>
+                                                        <span>Chi phí dự phòng và Logistic (5%):</span>
                                                         <span className="font-bold text-zinc-300">
                                                             {formatVND((tvcBudget - 2000000) - (
-                                                                Math.round((tvcBudget - 2000000) * 0.15) +
-                                                                Math.round((tvcBudget - 2000000) * 0.20) +
-                                                                Math.round((tvcBudget - 2000000) * 0.15) +
-                                                                Math.round((tvcBudget - 2000000) * 0.25) +
-                                                                Math.round((tvcBudget - 2000000) * 0.20)
+                                                                roundToThousand((tvcBudget - 2000000) * 0.15) +
+                                                                roundToThousand((tvcBudget - 2000000) * 0.20) +
+                                                                roundToThousand((tvcBudget - 2000000) * 0.15) +
+                                                                roundToThousand((tvcBudget - 2000000) * 0.25) +
+                                                                roundToThousand((tvcBudget - 2000000) * 0.20)
                                                             ))}
                                                         </span>
                                                     </div>
-                                                </React.Fragment>
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -2110,7 +2174,7 @@ Yêu cầu bắt buộc:
                                                     <span className="text-xs font-bold uppercase tracking-wider text-zinc-100">Gói Cao Cấp</span>
                                                     <span className="bg-zinc-900 text-zinc-300 text-[9px] px-1.5 py-0.5 rounded font-semibold border border-zinc-800">20 Video</span>
                                                 </div>
-                                                <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony Đời Mới | 4K. Gồm kịch bản, dựng & Quản lý kênh.</p>
+                                                <p className="text-[10px] text-zinc-400 line-clamp-2 mb-2">Sony Đời Mới | 4K. Gồm kịch bản, dựng và Quản lý kênh.</p>
                                             </div>
                                             <div className="text-xs font-bold text-zinc-300 mt-2 border-t border-slate-800 pt-2 flex justify-between">
                                                 <span>Chi phí trọn gói:</span><span>20.000.000 đ</span>
@@ -2241,7 +2305,7 @@ Yêu cầu bắt buộc:
                                         <h4 className="text-xs font-semibold text-zinc-300 tracking-wider uppercase">Dịch vụ bổ sung đi kèm (Tùy Chọn)</h4>
                                         <div className="flex items-center justify-between py-1.5">
                                             <div>
-                                                <span className="block text-xs font-medium text-white">Thiết bị & Nhân sự Flycam sự kiện</span>
+                                                <span className="block text-xs font-medium text-white">Thiết bị và Nhân sự Flycam sự kiện</span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => setEventFlycamDays(Math.max(0, eventFlycamDays - 1))} className="bg-gradient-to-b from-zinc-600 to-zinc-700 text-white border-b-2 border-zinc-800 w-10 h-10 rounded flex items-center justify-center text-xs font-bold">-</button>
@@ -2283,7 +2347,7 @@ Yêu cầu bắt buộc:
                             {activeCategory === 'DICH_VU_LE' && (
                                 <div className="space-y-4 animate-fadeIn">
                                     <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700">
-                                        <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Quay Phim & Thiết Bị Lẻ</label>
+                                        <label className="block text-xs font-semibold text-zinc-300 mb-2 uppercase">Quay Phim và Thiết Bị Lẻ</label>
                                         <div className="grid grid-cols-3 gap-2">
                                             <button onClick={() => setDlQuayOption('NONE')} className={getDlQuayOptionClass('NONE')}>Không Chọn</button>
                                             <button onClick={() => setDlQuayOption('HALF_DAY')} className={getDlQuayOptionClass('HALF_DAY')}>Nửa ngày (2tr)</button>
@@ -2354,8 +2418,9 @@ Yêu cầu bắt buộc:
                                             <label className="block text-[10px] text-zinc-400 mb-1">Giá dịch vụ (VND)</label>
                                             <input 
                                                 type="number" 
+                                                step="1000"
                                                 value={dlCustomPrice || ""} 
-                                                onChange={(e) => setDlCustomPrice(parseInt(e.target.value) || 0)}
+                                                onChange={(e) => setDlCustomPrice(roundToThousand(parseInt(e.target.value) || 0))}
                                                 className="w-full bg-black border border-zinc-855 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-zinc-500 text-xs font-mono" 
                                                 placeholder="Nhập giá trị..."
                                             />
@@ -2410,7 +2475,7 @@ Yêu cầu bắt buộc:
                                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H5a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM4 6h16M4 10h16m-16 4h12" />
                                 </svg>
-                                {showContractConfig ? "ĐÓNG KHUNG SOẠN THẢO HỢP ĐỒNG" : "LÀM HỢP ĐỒNG KINH TẾ (BÊN A & B)"}
+                                {showContractConfig ? "ĐÓNG KHUNG SOẠN THẢO HỢP ĐỒNG" : "LÀM HỢP ĐỒNG KINH TẾ (BÊN A và B)"}
                             </button>
                         </div>
 
@@ -2429,7 +2494,7 @@ Yêu cầu bắt buộc:
                                 </div>
                                 <div className="space-y-3 bg-zinc-900 p-3 rounded-lg border border-zinc-800 text-xs">
                                     {clientType === 'DOANH_NGHIEP' ? (
-                                        <React.Fragment>
+                                        <>
                                             <div>
                                                 <label className="block text-[9px] text-zinc-400 mb-1">Tên công ty / Đơn vị đại diện Bên B</label>
                                                 <input type="text" value={partyBCompany} onChange={(e) => setPartyBCompany(e.target.value)} className="w-full bg-black border border-zinc-800 rounded px-2 py-1.5 text-xs text-white" />
@@ -2441,35 +2506,34 @@ Yêu cầu bắt buộc:
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
                                                     <label className="block text-[9px] text-zinc-400 mb-1">Mã số thuế</label>
-                                                    <input type="text" value={partyBTaxCode} onChange={(e) => setPartyBTaxCode(e.target.value)} className="w-full bg-black border border-zinc-850 rounded px-2 py-1.5 text-xs text-white" />
+                                                    <input type="text" value={partyBTaxCode} onChange={(e) => setPartyBTaxCode(e.target.value)} className="w-full bg-black border border-zinc-855 rounded px-2 py-1.5 text-xs text-white" />
                                                 </div>
                                                 <div>
                                                     <label className="block text-[9px] text-zinc-400 mb-1">Số điện thoại</label>
-                                                    <input type="text" value={partyBPhone} onChange={(e) => setPartyBPhone(e.target.value)} className="w-full bg-black border border-zinc-850 rounded px-2 py-1.5 text-xs text-white" />
+                                                    <input type="text" value={partyBPhone} onChange={(e) => setPartyBPhone(e.target.value)} className="w-full bg-black border border-zinc-855 rounded px-2 py-1.5 text-xs text-white" />
                                                 </div>
                                             </div>
-                                            {/* BỔ SUNG CÁC TRƯỜNG PHÁP LÝ CHO DOANH NGHIỆP BÊN B */}
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
                                                     <label className="block text-[9px] text-zinc-400 mb-1">Người đại diện liên hệ</label>
-                                                    <input type="text" value={partyBRep} onChange={(e) => setPartyBRep(e.target.value)} className="w-full bg-black border border-zinc-850 rounded px-2 py-1.5 text-xs text-white" placeholder="Họ và tên..." />
+                                                    <input type="text" value={partyBRep} onChange={(e) => setPartyBRep(e.target.value)} className="w-full bg-black border border-zinc-855 rounded px-2 py-1.5 text-xs text-white" placeholder="Họ và tên..." />
                                                 </div>
                                                 <div>
                                                     <label className="block text-[9px] text-zinc-400 mb-1">Chức vụ đại diện</label>
-                                                    <input type="text" value={partyBPosition} onChange={(e) => setPartyBPosition(e.target.value)} className="w-full bg-black border border-zinc-850 rounded px-2 py-1.5 text-xs text-white" placeholder="Giám đốc, Đại diện..." />
+                                                    <input type="text" value={partyBPosition} onChange={(e) => setPartyBPosition(e.target.value)} className="w-full bg-black border border-zinc-855 rounded px-2 py-1.5 text-xs text-white" placeholder="Giám đốc, Đại diện..." />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="block text-[9px] text-zinc-400 mb-1">Số CCCD / CMND của người đại diện</label>
-                                                <input type="text" value={partyBRepCCCD} onChange={(e) => setPartyBRepCCCD(e.target.value)} className="w-full bg-black border border-zinc-850 rounded px-2 py-1.5 text-xs text-white" placeholder="Nhập số CCCD..." />
+                                                <label className="block text-[9px] text-zinc-400 mb-1">Số CCCD của người đại diện</label>
+                                                <input type="text" value={partyBRepCCCD} onChange={(e) => setPartyBRepCCCD(e.target.value)} className="w-full bg-black border border-zinc-855 rounded px-2 py-1.5 text-xs text-white" placeholder="Nhập số CCCD..." />
                                             </div>
                                             <div>
                                                 <label className="block text-[9px] text-zinc-400 mb-1">Tài khoản ngân hàng giao dịch Bên B</label>
-                                                <input type="text" value={partyBBank} onChange={(e) => setPartyBBank(e.target.value)} className="w-full bg-black border border-zinc-850 rounded px-2 py-1.5 text-xs text-white" placeholder="Tên ngân hàng, số tài khoản..." />
+                                                <input type="text" value={partyBBank} onChange={(e) => setPartyBBank(e.target.value)} className="w-full bg-black border border-zinc-855 rounded px-2 py-1.5 text-xs text-white" placeholder="Tên ngân hàng, số tài khoản..." />
                                             </div>
-                                        </React.Fragment>
+                                        </>
                                     ) : (
-                                        <React.Fragment>
+                                        <>
                                             <div>
                                                 <label className="block text-[9px] text-zinc-400 mb-1">Họ và tên khách hàng</label>
                                                 <input type="text" value={partyBCompany} onChange={(e) => setPartyBCompany(e.target.value)} className="w-full bg-black border border-zinc-800 rounded px-2 py-1.5 text-xs text-white" />
@@ -2492,7 +2556,7 @@ Yêu cầu bắt buộc:
                                                 <label className="block text-[9px] text-zinc-400 mb-1">Tài khoản ngân hàng giao dịch Bên B</label>
                                                 <input type="text" value={partyBBank} onChange={(e) => setPartyBBank(e.target.value)} className="w-full bg-black border border-zinc-850 rounded px-2 py-1.5 text-xs text-white" placeholder="Tên ngân hàng, số tài khoản..." />
                                             </div>
-                                        </React.Fragment>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -2538,7 +2602,7 @@ Yêu cầu bắt buộc:
                                 <div>
                                     <label className="block text-[10px] text-zinc-400 mb-1.5 uppercase font-semibold">Tông màu Proposal</label>
                                     <div className="grid grid-cols-3 gap-2">
-                                        <button type="button" onClick={() => setProposalTone('TRANG_DEN')} className={`py-2 px-1 text-[10px] font-bold rounded border transition-all ${proposalTone === 'TRANG_DEN' ? "bg-white text-slate-950 border-slate-400" : "bg-zinc-900 text-zinc-400 border-zinc-800"}`}>Trắng - Đen</button>
+                                        <button type="button" onClick={() => setProposalTone('TRANG_DEN')} className={`py-2 px-1 text-[10px] font-bold rounded border transition-all ${proposalTone === 'TRANG_DEN' ? "bg-white text-slate-955 border-slate-400" : "bg-zinc-900 text-zinc-400 border-zinc-800"}`}>Trắng - Đen</button>
                                         <button type="button" onClick={() => setProposalTone('NAU_VANG')} className={`py-2 px-1 text-[10px] font-bold rounded border transition-all ${proposalTone === 'NAU_VANG' ? "bg-[#4E342E] text-[#FFD700] border-amber-600" : "bg-zinc-900 text-zinc-400 border-zinc-800"}`}>Nâu - Vàng</button>
                                         <button type="button" onClick={() => setProposalTone('XANH_TRANG')} className={`py-2 px-1 text-[10px] font-bold rounded border transition-all ${proposalTone === 'XANH_TRANG' ? "bg-[#1E3A8A] text-white border-blue-500" : "bg-zinc-900 text-zinc-400"}`}>Xanh - Trắng</button>
                                     </div>
@@ -2585,7 +2649,7 @@ Yêu cầu bắt buộc:
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs text-zinc-300 mb-1 font-bold uppercase tracking-wider">Định hướng nghệ thuật & Visual</label>
+                                        <label className="block text-xs text-zinc-300 mb-1 font-bold uppercase tracking-wider">Định hướng nghệ thuật và Visual</label>
                                         <textarea 
                                             value={propDirection}
                                             onChange={(e) => setPropDirection(e.target.value)}
@@ -2602,7 +2666,7 @@ Yêu cầu bắt buộc:
 
                         {/* CẤU HÌNH PHỤ TRỢ */}
                         <div className="mt-6 bg-zinc-800 p-4 rounded-xl border border-zinc-800 space-y-3">
-                            <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider border-b border-zinc-700 pb-2">Cấu hình chiết khấu & VAT</h4>
+                            <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider border-b border-zinc-700 pb-2">Cấu hình chiết khấu và VAT</h4>
                             <div className="flex items-center justify-between py-2 border-b border-zinc-900 pb-2">
                                 <div>
                                     <span className="block text-xs font-medium text-white">Hiển thị Tổng Thanh Toán</span>
@@ -2659,7 +2723,7 @@ Yêu cầu bắt buộc:
                                                 <span className="bg-slate-900 text-white font-bold p-1 rounded-sm text-xs tracking-widest font-montserrat">UP</span>
                                                 <h2 className="text-xl font-black font-montserrat tracking-tight text-slate-900 uppercase">{providerName}</h2>
                                             </div>
-                                            <p className="text-xs text-slate-500 font-semibold mb-1">Dịch vụ quay dựng video quảng cáo, xây kênh & sự kiện chuyên nghiệp</p>
+                                            <p className="text-xs text-slate-500 font-semibold mb-1">Dịch vụ quay dựng video quảng cáo, xây kênh và sự kiện chuyên nghiệp</p>
                                         </div>
                                         <div className="sm:text-right">
                                             <h3 className="text-2xl font-black text-slate-955 tracking-wide font-montserrat">BẢNG BÁO GIÁ</h3>
@@ -2668,35 +2732,67 @@ Yêu cầu bắt buộc:
                                         </div>
                                     </div>
 
+                                    {/* THÔNG TIN KHÁCH HÀNG TRÊN BẢN IN A4 (HỖ TRỢ EDIT TRỰC TIẾP) */}
                                     <div className="bg-slate-50 rounded-lg p-4 mb-6 border border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs avoid-break">
                                         <div className="space-y-3">
                                             <div>
                                                 <strong className="text-slate-500 block text-[10px] uppercase mb-0.5">TÊN ĐƠN VỊ / KHÁCH HÀNG</strong>
-                                                <p className="text-slate-900 font-semibold min-h-[1.25rem]">{clientName || ""}</p>
+                                                {isEditing ? (
+                                                    <input 
+                                                        type="text" 
+                                                        value={clientName} 
+                                                        onChange={(e) => setClientName(e.target.value)}
+                                                        className="w-full input-flat font-semibold text-slate-900 text-xs" 
+                                                        placeholder="Nhấp để nhập tên khách hàng..."
+                                                    />
+                                                ) : (
+                                                    <p className="text-slate-900 font-semibold min-h-[1.25rem]">{clientName || ""}</p>
+                                                )}
                                             </div>
                                             <div>
                                                 <strong className="text-slate-500 block text-[10px] uppercase mb-0.5">NGƯỜI ĐẠI DIỆN</strong>
-                                                <p className="text-slate-800 font-medium min-h-[1.25rem]">{clientContact || ""}</p>
+                                                {isEditing ? (
+                                                    <input 
+                                                        type="text" 
+                                                        value={clientContact} 
+                                                        onChange={(e) => setClientContact(e.target.value)}
+                                                        className="w-full input-flat font-medium text-slate-800 text-xs" 
+                                                        placeholder="Nhấp để nhập SĐT/Đại diện..."
+                                                    />
+                                                ) : (
+                                                    <p className="text-slate-800 font-medium min-h-[1.25rem]">{clientContact || ""}</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="space-y-3">
                                             <div>
                                                 <strong className="text-slate-500 block text-[10px] uppercase mb-0.5">TÊN DỰ ÁN</strong>
-                                                <p className="text-indigo-700 font-bold min-h-[1.25rem]">{projectName || ""}</p>
+                                                {isEditing ? (
+                                                    <input 
+                                                        type="text" 
+                                                        value={projectName} 
+                                                        onChange={(e) => setProjectName(e.target.value)}
+                                                        className="w-full input-flat font-bold text-indigo-700 text-xs" 
+                                                        placeholder="Nhấp để đặt tên dự án..."
+                                                    />
+                                                ) : (
+                                                    <p className="text-indigo-700 font-bold min-h-[1.25rem]">{projectName || ""}</p>
+                                                )}
                                             </div>
                                             <div>
-                                                <strong className="text-slate-500 block text-[10px] uppercase mb-0.5">DỊCH VỤ SẢN XUẤT</strong>
+                                                <strong className="text-slate-500 block text-[10px] uppercase mb-0.5">DỰ ÁN SẢN XUẤT</strong>
                                                 <p className="text-slate-600">Hành trình hình ảnh và sáng tạo kịch bản video.</p>
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* BẢNG BÁO GIÁ SẢN PHẨM SỬA TRỰC TIẾP TRÊN TRANG A4 */}
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left text-xs">
                                             <thead>
                                                 <tr className="bg-slate-900 text-white font-montserrat uppercase tracking-wider text-[10px] avoid-break">
                                                     <th className="py-2.5 px-3 rounded-l">STT</th>
-                                                    <th className="py-2.5 px-3">Hạng Mục Công Việc</th>
+                                                    <th className="py-2.5 px-3 w-1/2">Hạng Mục Công Việc</th>
                                                     <th className="py-2.5 px-3 text-center">SL</th>
                                                     <th className="py-2.5 px-3 text-right">Đơn Giá</th>
                                                     <th className="py-2.5 px-3 text-right rounded-r">Thành Tiền</th>
@@ -2709,19 +2805,70 @@ Yêu cầu bắt buộc:
                                                     </tr>
                                                 ) : (
                                                     finalQuoteItems.map((item, idx) => (
-                                                        <tr key={item.id} onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                                                        <tr 
+                                                            key={item.id} 
+                                                            onClick={(e) => {
+                                                                // Ngăn mở menu chỉnh sửa lệch dòng khi đang nhấp sửa giá trị
+                                                                if (e.target.tagName === 'INPUT') return;
+                                                                setActiveMenuId(activeMenuId === item.id ? null : item.id);
+                                                            }} 
+                                                            className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition"
+                                                        >
                                                             <td className="py-3.5 px-3 font-semibold text-slate-400 w-8">{idx + 1}</td>
                                                             <td className="py-3.5 px-3">
-                                                                <div className="font-semibold text-slate-900">{item.name}</div>
-                                                                {item.desc && <div className="text-[10px] text-slate-500 leading-tight mt-0.5">{item.desc}</div>}
+                                                                {isEditing ? (
+                                                                    <>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            value={item.name} 
+                                                                            onChange={(e) => updateInvoiceItem(item.id, 'name', e.target.value)}
+                                                                            className="w-full input-flat font-semibold text-slate-900 text-xs"
+                                                                        />
+                                                                        <input 
+                                                                            type="text" 
+                                                                            value={item.desc} 
+                                                                            onChange={(e) => updateInvoiceItem(item.id, 'desc', e.target.value)}
+                                                                            className="w-full input-flat text-[10px] text-slate-500 mt-1"
+                                                                        />
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="font-semibold text-slate-900">{item.name}</div>
+                                                                        {item.desc && <div className="text-[10px] text-slate-500 leading-tight mt-0.5">{item.desc}</div>}
+                                                                    </>
+                                                                )}
                                                             </td>
-                                                            <td className="py-3.5 px-3 text-center font-medium text-slate-800">{item.qty}</td>
-                                                            <td className="py-3.5 px-3 text-right font-medium text-slate-800">{item.unitPrice > 0 ? formatVND(item.unitPrice) : "-"}</td>
+                                                            <td className="py-3.5 px-3 text-center font-medium text-slate-800">
+                                                                {isEditing ? (
+                                                                    <input 
+                                                                        type="number" 
+                                                                        min="1"
+                                                                        value={item.qty} 
+                                                                        onChange={(e) => updateInvoiceItem(item.id, 'qty', e.target.value)}
+                                                                        className="w-12 bg-transparent text-center font-semibold text-slate-800 text-xs input-flat no-spinner"
+                                                                    />
+                                                                ) : (
+                                                                    <span>{item.qty}</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3.5 px-3 text-right font-medium text-slate-800">
+                                                                {isEditing ? (
+                                                                    <input 
+                                                                        type="number" 
+                                                                        step="1000"
+                                                                        value={item.unitPrice} 
+                                                                        onChange={(e) => updateInvoiceItem(item.id, 'unitPrice', e.target.value)}
+                                                                        className="w-24 bg-transparent text-right font-semibold text-slate-800 text-xs input-flat no-spinner"
+                                                                    />
+                                                                ) : (
+                                                                    <span>{item.unitPrice > 0 ? formatVND(item.unitPrice) : "-"}</span>
+                                                                )}
+                                                            </td>
                                                             <td className="py-3.5 px-3 text-right font-bold text-slate-955 relative">
                                                                 {formatVND(item.subtotal)}
-                                                                {activeMenuId === item.id && (
+                                                                {activeMenuId === item.id && isEditing && (
                                                                     <div className="absolute top-1/2 -translate-y-1/2 bg-slate-900 text-white border border-slate-700 rounded-lg shadow-xl py-1.5 px-3 z-50 flex items-center gap-2" style={{ right: '100%', marginRight: '8px' }}>
-                                                                        <button onClick={(e) => { e.stopPropagation(); handleRemoveItem(item.id); }} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-[10px]">Xóa</button>
+                                                                        <button onClick={(e) => { e.stopPropagation(); handleRemoveItem(item.id); }} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-[10px]">Xóa hàng</button>
                                                                     </div>
                                                                 )}
                                                             </td>
@@ -2751,7 +2898,7 @@ Yêu cầu bắt buộc:
                                                         <span>{formatVND(vatAmount)}</span>
                                                     </div>
                                                 )}
-                                                <div className="flex justify-between border-t border-slate-300 pt-2 text-sm font-bold text-slate-950">
+                                                <div className="flex justify-between border-t border-slate-300 pt-2 text-sm font-bold text-slate-955">
                                                     <span>TỔNG CỘNG THANH TOÁN:</span>
                                                     <span className="text-base text-indigo-700">{formatVND(grandTotal)}</span>
                                                 </div>
@@ -2759,9 +2906,20 @@ Yêu cầu bắt buộc:
                                         </div>
                                     )}
 
+                                    {/* SỬA TRỰC TIẾP GHI CHÚ CHÂN TRANG TRÊN BẢN PREVIEW */}
                                     <div className="mt-10 border-t border-slate-100 pt-6 avoid-break">
                                         <h4 className="text-xs font-bold text-slate-800 uppercase mb-1">GHI CHÚ</h4>
-                                        <p className="text-[10px] text-slate-500 italic leading-relaxed">{note}</p>
+                                        {isEditing ? (
+                                            <textarea 
+                                                value={note} 
+                                                onChange={(e) => setNote(e.target.value)}
+                                                rows="2"
+                                                className="w-full input-flat text-[10px] text-slate-500 italic leading-relaxed resize-none"
+                                                placeholder="Cập nhật ghi chú trực tiếp tại đây..."
+                                            />
+                                        ) : (
+                                            <p className="text-[10px] text-slate-500 italic leading-relaxed">{note}</p>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -2775,7 +2933,7 @@ Yêu cầu bắt buộc:
                                                 <span className={`${toneStyles[proposalTone].accentBg} ${toneStyles[proposalTone].accentText} font-bold px-1.5 py-0.5 rounded-sm text-xs`}>UP</span>
                                                 <h2 className="text-lg font-black uppercase">{providerName}</h2>
                                             </div>
-                                            <p className="text-[10px] font-medium uppercase tracking-wider opacity-80">BẢN ĐỀ XUẤT PHƯƠNG ÁN SẢN XUẤT & BÁO GIÁ DỰ ÁN</p>
+                                            <p className="text-[10px] font-medium uppercase tracking-wider opacity-80">BẢN ĐỀ XUẤT PHƯƠNG ÁN SẢN XUẤT và BÁO GIÁ DỰ ÁN</p>
                                         </div>
                                         <div className="sm:text-right">
                                             <span className={`text-[9px] font-bold px-2.5 py-0.5 rounded-full ${toneStyles[proposalTone].badgeBg} ${toneStyles[proposalTone].badgeText} mb-1 uppercase`}>PROPOSAL</span>
@@ -2786,45 +2944,101 @@ Yêu cầu bắt buộc:
                                     <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mt-4 p-3.5 rounded-lg border avoid-break ${toneStyles[proposalTone].border} ${toneStyles[proposalTone].secBg}`}>
                                         <div>
                                             <span className="block text-[9px] font-bold uppercase opacity-60 mb-0.5">KHÁCH HÀNG ĐỐI TÁC</span>
-                                            <p className="font-bold">{clientName || "Quý khách hàng"}</p>
+                                            {isEditing ? (
+                                                <input 
+                                                    type="text" 
+                                                    value={clientName} 
+                                                    onChange={(e) => setClientName(e.target.value)}
+                                                    className="w-full input-flat text-xs font-bold text-inherit"
+                                                />
+                                            ) : (
+                                                <p className="font-bold">{clientName || "Quý khách hàng"}</p>
+                                            )}
                                             <p className="opacity-75">{clientContact}</p>
                                         </div>
                                         <div>
                                             <span className="block text-[9px] font-bold uppercase opacity-60 mb-0.5">DỰ ÁN SẢN XUẤT</span>
-                                            <p className="font-bold text-indigo-600">{projectName || "Chưa đặt tên"}</p>
+                                            {isEditing ? (
+                                                <input 
+                                                    type="text" 
+                                                    value={projectName} 
+                                                    onChange={(e) => setProjectName(e.target.value)}
+                                                    className="w-full input-flat text-xs font-bold text-indigo-600"
+                                                />
+                                            ) : (
+                                                <p className="font-bold text-indigo-600">{projectName || "Chưa đặt tên"}</p>
+                                            )}
                                             <p className="opacity-75">Hạng mục chính: {activeCategory.replace('_', ' ')}</p>
                                         </div>
                                     </div>
 
+                                    {/* PROPOSAL: CÁC TIÊU ĐỀ SÁNG TẠO SỬA TRỰC TIẾP */}
                                     <div className="space-y-4">
-                                        <h4 className={`text-xs font-bold uppercase tracking-widest border-b pb-1 avoid-break ${toneStyles[proposalTone].textMain}`}>I. Định hướng sáng tạo & Chiến lược hình ảnh</h4>
+                                        <h4 className={`text-xs font-bold uppercase tracking-widest border-b pb-1 avoid-break ${toneStyles[proposalTone].textMain}`}>I. Định hướng sáng tạo và Chiến lược hình ảnh</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] avoid-break">
                                             <div className={`p-2.5 rounded border ${toneStyles[proposalTone].border} ${toneStyles[proposalTone].secBg}`}>
                                                 <span className="block text-[9px] font-bold opacity-65 mb-0.5">MỤC TIÊU CHIẾN DỊCH</span>
-                                                <p className="font-medium">{propObjective || "Tăng nhận diện thương hiệu cho dự án."}</p>
+                                                {isEditing ? (
+                                                    <textarea 
+                                                        value={propObjective} 
+                                                        onChange={(e) => setPropObjective(e.target.value)}
+                                                        className="w-full input-flat text-[11px] font-medium text-inherit resize-none"
+                                                        rows="2"
+                                                    />
+                                                ) : (
+                                                    <p className="font-medium">{propObjective || "Tăng nhận diện thương hiệu cho dự án."}</p>
+                                                )}
                                             </div>
                                             <div className={`p-2.5 rounded border ${toneStyles[proposalTone].border} ${toneStyles[proposalTone].secBg}`}>
                                                 <span className="block text-[9px] font-bold opacity-65 mb-0.5">KHÁCH HÀNG TIỀM NĂNG</span>
-                                                <p className="font-medium">{propTarget || "Tệp người xem mục tiêu chiến dịch."}</p>
+                                                {isEditing ? (
+                                                    <textarea 
+                                                        value={propTarget} 
+                                                        onChange={(e) => setPropTarget(e.target.value)}
+                                                        className="w-full input-flat text-[11px] font-medium text-inherit resize-none"
+                                                        rows="2"
+                                                    />
+                                                ) : (
+                                                    <p className="font-medium">{propTarget || "Tệp người xem mục tiêu chiến dịch."}</p>
+                                                )}
                                             </div>
                                             <div className={`p-2.5 rounded border ${toneStyles[proposalTone].border} ${toneStyles[proposalTone].secBg}`}>
                                                 <span className="block text-[9px] font-bold opacity-65 mb-0.5">THÔNG ĐIỆP CỐT LÕI</span>
-                                                <p className="font-medium">{propMessage || "Thông điệp giá trị truyền tải."}</p>
+                                                {isEditing ? (
+                                                    <textarea 
+                                                        value={propMessage} 
+                                                        onChange={(e) => setPropMessage(e.target.value)}
+                                                        className="w-full input-flat text-[11px] font-medium text-inherit resize-none"
+                                                        rows="2"
+                                                    />
+                                                ) : (
+                                                    <p className="font-medium">{propMessage || "Thông điệp giá trị truyền tải."}</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className={`p-3 rounded border avoid-break ${toneStyles[proposalTone].border} text-xs leading-relaxed`}>
-                                            <span className="block text-[9px] font-bold opacity-65 mb-1">ĐỊNH HƯỚNG NGHỆ THUẬT & VISUAL</span>
-                                            <p className="opacity-95 italic font-medium">{computedDirection}</p>
+                                            <span className="block text-[9px] font-bold opacity-65 mb-1">ĐỊNH HƯỚNG NGHỆ THUẬT và VISUAL</span>
+                                            {isEditing ? (
+                                                <textarea 
+                                                    value={propDirection} 
+                                                    onChange={(e) => setPropDirection(e.target.value)}
+                                                    className="w-full input-flat text-xs text-inherit font-medium resize-none leading-relaxed"
+                                                    rows="4"
+                                                />
+                                            ) : (
+                                                <p className="opacity-95 italic font-medium">{computedDirection}</p>
+                                            )}
                                         </div>
                                     </div>
 
+                                    {/* PHẦN BUDGET TRONG PROPOSAL */}
                                     <div className="space-y-2">
                                         <h4 className={`text-xs font-bold uppercase tracking-widest border-b pb-1 avoid-break ${toneStyles[proposalTone].textMain}`}>II. Chi tiết dự toán ngân sách</h4>
                                         <table className="w-full text-left text-xs">
                                             <thead>
                                                 <tr className={`${toneStyles[proposalTone].accentBg} ${toneStyles[proposalTone].accentText} font-semibold uppercase tracking-wider text-[9px] avoid-break`}>
                                                     <th className="py-2 px-3 rounded-l">STT</th>
-                                                    <th className="py-2 px-3">Chi tiết công việc</th>
+                                                    <th className="py-2 px-3 w-1/2">Chi tiết công việc</th>
                                                     <th className="py-2 px-3 text-center">SL</th>
                                                     <th className="py-2 px-3 text-right">Đơn giá</th>
                                                     <th className="py-2 px-3 text-right rounded-r">Thành tiền</th>
@@ -2835,11 +3049,54 @@ Yêu cầu bắt buộc:
                                                     <tr key={item.id} className={`border-b ${toneStyles[proposalTone].border}`}>
                                                         <td className="py-2 px-3 opacity-60 w-8">{idx + 1}</td>
                                                         <td className="py-2 px-3">
-                                                            <div className="font-semibold">{item.name}</div>
-                                                            {item.desc && <p className="text-[9px] opacity-70 mt-0.5">{item.desc}</p>}
+                                                            {isEditing ? (
+                                                                <>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={item.name} 
+                                                                        onChange={(e) => updateInvoiceItem(item.id, 'name', e.target.value)}
+                                                                        className="w-full input-flat text-xs font-semibold text-inherit"
+                                                                    />
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={item.desc} 
+                                                                        onChange={(e) => updateInvoiceItem(item.id, 'desc', e.target.value)}
+                                                                        className="w-full input-flat text-[9px] opacity-70 mt-1"
+                                                                    />
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="font-semibold">{item.name}</div>
+                                                                    {item.desc && <p className="text-[9px] opacity-70 mt-0.5">{item.desc}</p>}
+                                                                </>
+                                                            )}
                                                         </td>
-                                                        <td className="py-2 px-3 text-center font-medium">{item.qty}</td>
-                                                        <td className="py-2 px-3 text-right opacity-85">{item.unitPrice > 0 ? formatVND(item.unitPrice) : "-"}</td>
+                                                        <td className="py-2 px-3 text-center font-medium">
+                                                            {isEditing ? (
+                                                                <input 
+                                                                    type="number" 
+                                                                    min="1"
+                                                                    value={item.qty} 
+                                                                    onChange={(e) => updateInvoiceItem(item.id, 'qty', e.target.value)}
+                                                                    className="w-10 bg-transparent text-center font-semibold text-inherit text-xs input-flat no-spinner"
+                                                                />
+                                                            ) : (
+                                                                <span>{item.qty}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-right opacity-85">
+                                                            {isEditing ? (
+                                                                <input 
+                                                                    type="number" 
+                                                                    step="1000"
+                                                                    value={item.unitPrice} 
+                                                                    onChange={(e) => updateInvoiceItem(item.id, 'unitPrice', e.target.value)}
+                                                                    className="w-20 bg-transparent text-right font-semibold text-inherit text-xs input-flat no-spinner"
+                                                                />
+                                                            ) : (
+                                                                <span>{item.unitPrice > 0 ? formatVND(item.unitPrice) : "-"}</span>
+                                                            )}
+                                                        </td>
                                                         <td className="py-2 px-3 text-right font-bold">{formatVND(item.subtotal)}</td>
                                                     </tr>
                                                 ))}
@@ -2861,7 +3118,7 @@ Yêu cầu bắt buộc:
                                     </div>
 
                                     <div className="space-y-2.5">
-                                        <h4 className={`text-xs font-bold uppercase tracking-widest border-b pb-1 avoid-break ${toneStyles[proposalTone].textMain}`}>III. Quy trình & Timeline thực hiện chi tiết</h4>
+                                        <h4 className={`text-xs font-bold uppercase tracking-widest border-b pb-1 avoid-break ${toneStyles[proposalTone].textMain}`}>III. Quy trình và Timeline thực hiện chi tiết</h4>
                                         {renderTimeline(toneStyles[proposalTone])}
                                     </div>
                                 </div>
@@ -2873,7 +3130,7 @@ Yêu cầu bắt buộc:
                                     {contractCustomText ? (
                                         <div className="whitespace-pre-line text-black avoid-break">{contractCustomText}</div>
                                     ) : (
-                                        <React.Fragment>
+                                        <>
                                             <div className="text-center font-bold text-black border-b border-black pb-3 avoid-break">
                                                 <p className="text-sm uppercase tracking-wider">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
                                                 <p className="text-xs underline font-bold">Độc lập - Tự do - Hạnh phúc</p>
@@ -2905,7 +3162,7 @@ Yêu cầu bắt buộc:
                                             {/* BÊN B */}
                                             <div className="space-y-1 border-l-2 border-black pl-3 text-xs text-black avoid-break">
                                                 {clientType === 'DOANH_NGHIEP' ? (
-                                                    <React.Fragment>
+                                                    <>
                                                         <h4 className="font-bold uppercase text-black">BÊN B: ĐƠN VỊ SỬ DỤNG DỊCH VỤ (DOANH NGHIỆP)</h4>
                                                         <p><strong>Tên công ty/đơn vị:</strong> {partyBCompany || "Chưa nhập"}</p>
                                                         <p><strong>Địa chỉ trụ sở:</strong> {partyBAddress || "Chưa nhập"}</p>
@@ -2914,16 +3171,16 @@ Yêu cầu bắt buộc:
                                                         <p><strong>Số CCCD người đại diện:</strong> {partyBRepCCCD || "Chưa nhập"}</p>
                                                         <p><strong>Số điện thoại:</strong> {partyBPhone || "Chưa nhập"}</p>
                                                         <p><strong>Tài khoản ngân hàng giao dịch:</strong> {partyBBank || "Chưa nhập"}</p>
-                                                    </React.Fragment>
+                                                    </>
                                                 ) : (
-                                                    <React.Fragment>
+                                                    <>
                                                         <h4 className="font-bold uppercase text-black">BÊN B: ĐƠN VỊ SỬ DỤNG DỊCH VỤ (CÁ NHÂN)</h4>
                                                         <p><strong>Họ và tên khách hàng:</strong> {partyBCompany || "Chưa nhập"}</p>
                                                         <p><strong>Địa chỉ thường trú:</strong> {partyBAddress || "Chưa nhập"}</p>
                                                         <p><strong>Số CCCD / CMND:</strong> {partyBTaxCode || "Chưa nhập"}</p>
                                                         <p><strong>Số điện thoại:</strong> {partyBPhone || "Chưa nhập"}</p>
                                                         <p><strong>Tài khoản ngân hàng giao dịch:</strong> {partyBBank || "Chưa nhập"}</p>
-                                                    </React.Fragment>
+                                                    </>
                                                 )}
                                             </div>
 
@@ -2962,7 +3219,7 @@ Yêu cầu bắt buộc:
 
                                             {/* ĐIỀU 2 */}
                                             <div className="space-y-1 text-black avoid-break">
-                                                <h5 className="font-bold text-xs uppercase text-black">ĐIỀU 2: TIÊU CHUẨN SẢN XUẤT PHIM VÀ KIỂM DUYỆT (PPM)</h5>
+                                                <h5 className="font-bold text-xs uppercase text-black">ĐIỀU 2: TIÊU CHUẨN SẢN XUẤT VÀ KIỂM DUYỆT (PPM)</h5>
                                                 <p className="pl-1 text-xs leading-relaxed">
                                                     1. <strong>Phê duyệt kịch bản phân cảnh:</strong> Bên B tiến hành ký duyệt văn bản kịch bản phân cảnh chi tiết trước ngày bấm máy tối thiểu 03 (ba) ngày làm việc làm căn cứ thực hiện.<br />
                                                     2. <strong>Buổi họp tiền kỳ PPM (Pre-Production Meeting):</strong> Trước ngày quay chính thức, hai bên cùng họp PPM thống nhất về diễn viên, makeup layout, trang phục và thiết lập bối cảnh. Ngay khi PPM được ký thông qua, Bên B cam kết không thay đổi cốt kịch bản hoặc diễn viên tại hiện trường set quay. Mọi sự thay đổi tại set quay làm phát sinh chi phí thiết bị, bối cảnh sẽ do Bên B chịu trách nhiệm chi trả bổ sung 100% dựa trên thực tế phát sinh.
@@ -2993,16 +3250,16 @@ Yêu cầu bắt buộc:
                                                 <h5 className="font-bold text-xs uppercase text-black">ĐIỀU 5: CHI PHÍ DỊCH VỤ VÀ PHƯƠNG THỨC GIẢI NGÂN</h5>
                                                 <p className="pl-1 text-xs leading-relaxed">
                                                     1. <strong>Tổng giá trị hợp đồng:</strong> Chi phí trọn gói dịch vụ là: <strong>{formatVND(grandTotal)}</strong> (Mức phí đã bao gồm các khoản thuế suất VAT đăng ký và chiết khấu ưu đãi nếu có).<br />
-                                                    2. <strong>Tiến độ thanh toán 3 đợt:</strong> Bên B chuyển khoản thanh toán cho Bên A chia làm 03 (ba) đợt cụ thể như sau:<br />
-                                                    • <strong>Đợt 1 (Tạm ứng 50% đặt cọc):</strong> Bên B chuyển khoản tạm ứng đặt cọc dịch vụ là: <strong>{formatVND(grandTotal * 0.5)}</strong> cho Bên A ngay sau khi hai bên tiến hành ký kết hợp đồng này.<br />
-                                                    • <strong>Đợt 2 (Thanh toán 30%):</strong> Bên B thanh toán tiếp số tiền là: <strong>{formatVND(grandTotal * 0.3)}</strong> cho Bên A sau khi Bên A gửi bản video demo thứ nhất.<br />
-                                                    • <strong>Đợt 3 (Thanh toán 20% còn lại):</strong> Bên B thanh toán nốt số tiền còn lại là: <strong>{formatVND(grandTotal * 0.2)}</strong> cho Bên A sau khi Bên A bàn giao và nghiệm thu xong video thành phẩm đạt chuẩn thỏa thuận ban đầu.
+                                                    2. <strong>Tiến độ thanh toán 3 đợt làm tròn chẵn:</strong> Bên B chuyển khoản thanh toán cho Bên A chia làm 03 (ba) đợt cụ thể như sau:<br />
+                                                    • <strong>Đợt 1 (Tạm ứng 50% đặt cọc):</strong> Bên B chuyển khoản tạm ứng đặt cọc dịch vụ là: <strong>{formatVND(roundToThousand(grandTotal * 0.5))}</strong> cho Bên A ngay sau khi hai bên tiến hành ký kết hợp đồng này.<br />
+                                                    • <strong>Đợt 2 (Thanh toán 30%):</strong> Bên B thanh toán tiếp số tiền là: <strong>{formatVND(roundToThousand(grandTotal * 0.3))}</strong> cho Bên A sau khi Bên A gửi bản video demo thứ nhất.<br />
+                                                    • <strong>Đợt 3 (Thanh toán 20% còn lại):</strong> Bên B thanh toán nốt số tiền còn lại (đã trừ bù trừ làm tròn để khớp chính xác tổng giá trị) là: <strong>{formatVND(grandTotal - (roundToThousand(grandTotal * 0.5) + roundToThousand(grandTotal * 0.3)))}</strong> cho Bên A sau khi Bên A bàn giao và nghiệm thu xong video thành phẩm đạt chuẩn thỏa thuận ban đầu.
                                                 </p>
                                             </div>
 
                                             {/* ĐIỀU 6 */}
                                             <div className="space-y-1 text-black avoid-break">
-                                                <h5 className="font-bold text-xs uppercase text-black">ĐIỀU 6: QUYỀN SỞ HỮU TRÍ TUỆ VÀ SỬ DỤNG THÀNH PHẨM</h5>
+                                                <h5 className="font-bold text-xs uppercase text-black">ĐIỀU 6: QUYỀN SỞ HỮU TRÍ TUỆ và SỬ DỤNG THÀNH PHẨM</h5>
                                                 <p className="pl-1 text-xs leading-relaxed">
                                                     1. <strong>Bản quyền:</strong> Bên A cam kết sử dụng hệ thống nhạc nền bản quyền thương mại và font chữ được cấp phép. Bên B được cấp quyền phát sóng rộng rãi sản phẩm trên các nền tảng mạng xã hội và truyền thông.<br />
                                                     2. <strong>Quyền sở hữu source thô (Raw File):</strong> Toàn bộ source video quay thô chưa biên tập thuộc quyền sở hữu tài sản kỹ thuật của Bên A. Bên B chỉ chính thức được chuyển giao bản quyền sử dụng video thành phẩm sau khi hoàn thành 100% nghĩa vụ thanh toán chi phí hợp đồng.
@@ -3011,7 +3268,7 @@ Yêu cầu bắt buộc:
 
                                             {/* ĐIỀU 7 */}
                                             <div className="space-y-1 text-black avoid-break font-bold">
-                                                <h5 className="font-bold text-xs uppercase text-black font-extrabold">ĐIỀU 7: QUY ĐỊNH PHẠT VI PHẠM VÀ BỒI THƯỜNG HỢP ĐỒNG</h5>
+                                                <h5 className="font-bold text-xs uppercase text-black font-extrabold">ĐIỀU 7: QUY ĐỊNH PHẠT VI PHẠM và BỒI THƯỜNG HỢP ĐỒNG</h5>
                                                 <p className="pl-1 text-xs leading-relaxed font-normal">
                                                     1. Trách nhiệm giao video và phạt trễ hạn từ Bên A: Bên A có trách nhiệm trả đúng hẹn video cho Bên B theo đúng quy định. Trường hợp Bên A giao trễ video (được tính theo mốc thời gian bàn giao video demo thứ nhất quy định tại Điều 4), Bên A phải chịu mức phạt vi phạm bằng 20% tổng giá trị hợp đồng cho Bên B. Mọi vấn đề chậm trễ do Bên B chậm duyệt kịch bản, bối cảnh, diễn viên hoặc phản hồi feedback chậm sẽ hoàn toàn không bị tính trong điều khoản phạt này.<br />
                                                     2. Bồi thường do không hoàn thành sản phẩm từ Bên A: Trong trường hợp Bên A không hoàn thành được sản phẩm cuối cùng theo đúng thỏa thuận ban đầu do lỗi chủ quan xuất phát từ phía Bên A, Bên A có trách nhiệm bồi thường và hoàn trả lại 100% tổng giá trị hợp đồng này cho Bên B.<br />
@@ -3022,7 +3279,7 @@ Yêu cầu bắt buộc:
 
                                             {/* ĐIỀU 8 */}
                                             <div className="space-y-1 text-black avoid-break">
-                                                <h5 className="font-bold text-xs uppercase text-black">ĐIỀU 8: ĐIỀU KHOẢN CHUNG VÀ GIẢI QUYẾT TRANH CHẤP</h5>
+                                                <h5 className="font-bold text-xs uppercase text-black">ĐIỀU 8: ĐIỀU KHOẢN CHUNG và GIẢI QUYẾT TRANH CHẤP</h5>
                                                 <p className="pl-1 text-xs leading-relaxed">
                                                     1. <strong>Bảo mật:</strong> Hai bên cam kết bảo mật tuyệt đối thông tin thương mại, kịch bản, dữ liệu dự án của đối tác, không tiết lộ cho bên thứ ba khi chưa có sự cho phép bằng văn bản.<br />
                                                     2. <strong>Giải quyết tranh chấp:</strong> Mọi tranh chấp phát sinh sẽ được giải quyết trước tiên thông qua thương lượng hòa giải. Trường hợp thương lượng không đạt kết quả trong vòng 30 ngày, vụ việc sẽ được đưa ra giải quyết tại Tòa án nhân dân có thẩm quyền tại Thành phố Hồ Chí Minh để xử lý theo pháp luật Việt Nam.
@@ -3039,7 +3296,7 @@ Yêu cầu bắt buộc:
                                                     <p className="text-slate-400 font-normal italic text-[10px]">(Ký, ghi rõ họ tên và đóng dấu)</p>
                                                 </div>
                                             </div>
-                                        </React.Fragment>
+                                        </>
                                     )}
                                 </div>
                             )}
@@ -3051,7 +3308,7 @@ Yêu cầu bắt buộc:
                     <div className="fixed bottom-0 left-0 right-0 bg-neutral-950/95 backdrop-blur-md border-t border-zinc-800 py-4 px-6 shadow-2xl z-50 no-print flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2 text-xs text-zinc-400">
                             <span className="inline-flex items-center justify-center bg-zinc-800 text-zinc-300 w-5 h-5 rounded-full font-bold border border-zinc-700 font-mono">i</span>
-                            <span>Hỗ trợ xuất tệp ảnh PNG hoặc văn bản PDF sắc nét.</span>
+                            <span>Hỗ trợ xuất tệp ảnh PNG hoặc văn bản PDF sắc nét. Nhấp trực tiếp trên bản preview để sửa đổi dữ liệu nhanh.</span>
                         </div>
                         <div className="flex flex-col sm:flex-row items-center justify-between sm:justify-end gap-6 w-full md:w-auto border-t border-zinc-800 md:border-t-0 pt-3 md:pt-0">
                             <div className="text-left md:text-right">
@@ -3060,15 +3317,15 @@ Yêu cầu bắt buộc:
                             </div>
                             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end mt-2 sm:mt-0">
                                 {previewMode === 'CONTRACT' ? (
-                                    <React.Fragment>
+                                    <>
                                         <button onClick={handleExportDOCX} className={getExportBtnClass(false, false)}>XUẤT HỢP ĐỒNG DOCX</button>
                                         <button onClick={handlePrint} disabled={isGeneratingPDF} className={getExportBtnClass(isGeneratingPDF, true)}>{isGeneratingPDF ? "ĐANG IN PDF..." : "XUẤT HỢP ĐỒNG PDF"}</button>
-                                    </React.Fragment>
+                                    </>
                                 ) : (
-                                    <React.Fragment>
+                                    <>
                                         <button onClick={handleExportPNG} disabled={isGeneratingPNG || isGeneratingPDF} className={getExportBtnClass(isGeneratingPNG, false)}>{isGeneratingPNG ? "ĐANG TẠO FILE..." : `XUẤT ${previewMode === 'QUOTE' ? 'BÁO GIÁ' : 'PROPOSAL'} PNG`}</button>
                                         <button onClick={handlePrint} disabled={isGeneratingPDF || isGeneratingPNG} className={getExportBtnClass(isGeneratingPDF, true)}>{isGeneratingPDF ? "ĐANG IN PDF..." : `XUẤT ${previewMode === 'QUOTE' ? 'BÁO GIÁ' : 'PROPOSAL'} PDF`}</button>
-                                    </React.Fragment>
+                                    </>
                                 )}
                             </div>
                         </div>
