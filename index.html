@@ -245,6 +245,19 @@
             const [projectName, setProjectName] = useState("");
             const [quoteId, setQuoteId] = useState(`BG-26-${Math.floor(1000 + Math.random() * 9000)}`);
             const [quoteDate, setQuoteDate] = useState(new Date().toLocaleDateString('vi-VN'));
+            // Mã số hồ sơ pháp lý hợp đồng (tính một lần khi mở trang để các chữ số thời gian không bị đổi liên tục):
+            // Cú pháp: BG-[2 số cuối của năm]-[1 số cuối của tháng][1 số cuối của ngày][1 số cuối của giờ][1 số cuối của phút]/HĐDV-UPM/[4 số của năm]
+            const [contractLegalId] = useState(() => {
+                const now = new Date();
+                const yy = String(now.getFullYear()).slice(-2);
+                const yyyy = now.getFullYear();
+                const m = now.getMonth() + 1; // tháng (1-12)
+                const d = now.getDate();      // ngày
+                const h = now.getHours();     // giờ
+                const min = now.getMinutes(); // phút
+                const lastDigit = (n) => n % 10; // lấy 1 chữ số cuối
+                return `BG-${yy}-${lastDigit(m)}${lastDigit(d)}${lastDigit(h)}${lastDigit(min)}/HĐDV-UPM/${yyyy}`;
+            });
 
             // Trạng thái của Tab sản phẩm hiện tại
             const [activeCategory, setActiveCategory] = useState('QUANG_CAO'); // QUANG_CAO, XAY_KENH, QUAY_BDS, EVENT, THOI_TRANG, DICH_VU_LE, PHIM_TVC
@@ -318,7 +331,7 @@
             const [proposalTone, setProposalTone] = useState('TRANG_DEN'); 
             const [previewMode, setPreviewMode] = useState('QUOTE'); 
             
-            // Các trường thông tin của đề xuất dự ��n
+            // Các trường thông tin của đề xuất dự ����n
             const [propObjective, setPropObjective] = useState("");
             const [propTarget, setPropTarget] = useState("");
             const [propMessage, setPropMessage] = useState("");
@@ -3223,7 +3236,7 @@ Yêu cầu bắt buộc:
                                             <p className="text-xs underline font-bold">Độc lập - Tự do - Hạnh phúc</p>
                                             <div className="my-3">
                                                 <h3 className="text-sm md:text-base font-extrabold uppercase">HỢP ĐỒNG KINH TẾ DỊCH VỤ TRUYỀN THÔNG VÀ SẢN XUẤT PHIM</h3>
-                                                <p className="text-[11px] font-bold">Mã số hồ sơ pháp lý: {quoteId}/HĐDV-UPM/2026</p>
+                                                <p className="text-[11px] font-bold">Mã số hồ sơ pháp lý: {contractLegalId}</p>
                                             </div>
                                         </div>
 
