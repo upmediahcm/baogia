@@ -199,7 +199,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script type="text/babel">
+    <script type="text/jsx-app">
         const { useState, useEffect, useMemo } = React;
 
         // Hàm hỗ trợ làm tròn số về bội số của 1.000đ (Ngăn chặn triệt để số lẻ 1đ, 2đ, 3đ...)
@@ -331,7 +331,7 @@
             const [proposalTone, setProposalTone] = useState('TRANG_DEN'); 
             const [previewMode, setPreviewMode] = useState('QUOTE'); 
             
-            // Các trường thông tin của đề xuất dự ����n
+            // Các trường thông tin của đề xuất dự     n
             const [propObjective, setPropObjective] = useState("");
             const [propTarget, setPropTarget] = useState("");
             const [propMessage, setPropMessage] = useState("");
@@ -402,7 +402,7 @@
                         ],
                         messages: [
                             `"Sở hữu ${proj} - Trải nghiệm cuộc sống thông thái, giải quyết nỗi lo tức thì."`,
-                            `"Khám phá sự khác biệt đột phá từ ${proj} - Lựa chọn tối ưu h��ng đầu của mọi nhà."`,
+                            `"Khám phá sự khác biệt đột phá từ ${proj} - Lựa chọn tối ưu h  ng đầu của mọi nhà."`,
                             `"${proj} - Đơn giản hóa mọi quy trình, khẳng định giá trị chất lượng đỉnh cao."`
                         ],
                         directions: [
@@ -516,7 +516,7 @@
                             `"Hơn cả một thương hiệu, ${proj} là biểu tượng kiến tạo chuẩn mực sống thịnh vượng."`
                         ],
                         directions: [
-                            `Xây dựng kịch bản cấu trúc 3 hồi điện ảnh giàu cảm xúc. Ghi hình bằng hệ thống camera Hollywood (ARRI Alexa/RED) k��t hợp lens Cine Anamorphic cao cấp.`,
+                            `Xây dựng kịch bản cấu trúc 3 hồi điện ảnh giàu cảm xúc. Ghi hình bằng hệ thống camera Hollywood (ARRI Alexa/RED) k  t hợp lens Cine Anamorphic cao cấp.`,
                             `Thiết kế ánh sáng khối sâu (cinematic lighting style) tại các set quay được thiết kế mỹ thuật riêng biệt bám sát nhận diện thương hiệu.`,
                             `Quy trình Color Grading chuẩn điện ảnh rạp chiếu quốc tế. Sản xuất âm thanh Sound Design chuyên sâu độc bản kết hợp lồng tiếng chuyên nghiệp.`
                         ]
@@ -1091,7 +1091,7 @@ Yêu cầu bắt buộc:
                 setAiError("");
 
                 const apiKey = ""; 
-                const systemPrompt = "Bạn là trợ lý viết nội dung chuyên nghiệp cho UP MEDIA. Hãy soạn đúng 1 câu mô tả dịch vụ ngắn gọn, cô đọng, chuyên nghiệp và có tính thương mại cao (dịch dưới 25 từ) bằng tiếng Việt cho dịch vụ có tên: \"" + serviceName + "\". Chỉ trả về đúng câu mô t���, không thêm tiêu đề, dẫn dắt hay dấu ngoặc kép.";
+                const systemPrompt = "Bạn là trợ lý viết nội dung chuyên nghiệp cho UP MEDIA. Hãy soạn đúng 1 câu mô tả dịch vụ ngắn gọn, cô đọng, chuyên nghiệp và có tính thương mại cao (dịch dưới 25 từ) bằng tiếng Việt cho dịch vụ có tên: \"" + serviceName + "\". Chỉ trả về đúng câu mô t   , không thêm tiêu đề, dẫn dắt hay dấu ngoặc kép.";
 
                 const payload = {
                     contents: [{ parts: [{ text: `Viết mô tả hấp dẫn cho dịch vụ: ${serviceName}` }] }],
@@ -2164,7 +2164,7 @@ Yêu cầu bắt buộc:
                                                     value={tvcBudget} 
                                                     onChange={(e) => setTvcBudget(e.target.value)} 
                                                     className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2.5 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-500 font-mono tracking-wide" 
-                                                    placeholder="Nhập t��ng ngân sách TVC..."
+                                                    placeholder="Nhập t  ng ngân sách TVC..."
                                                 />
                                                 <span className="absolute right-3 top-3 text-[10px] text-zinc-500 font-bold">VND</span>
                                             </div>
@@ -2829,7 +2829,7 @@ Yêu cầu bắt buộc:
                                 : "bg-white text-black border-slate-250 contract-style" 
                             }`}
                         >
-                            {/* B��O GIÁ */}
+                            {/* B  O GIÁ */}
                             {previewMode === 'QUOTE' && (
                                 <div className="animate-fadeIn">
                                     <div className="flex flex-col sm:flex-row justify-between items-start border-b-2 border-slate-800 pb-5 mb-6 gap-4 avoid-break">
@@ -3381,6 +3381,32 @@ Yêu cầu bắt buộc:
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+
+    <script>
+        // Bootstrap: biên dịch JSX bằng runtime "classic" để tránh lỗi
+        // 'Cannot use import statement outside a module' từ Babel standalone mới.
+        (function () {
+            function compileAndRun() {
+                try {
+                    var srcEl = document.querySelector('script[type="text/jsx-app"]');
+                    if (!srcEl) return;
+                    var out = Babel.transform(srcEl.textContent, {
+                        presets: [['react', { runtime: 'classic' }]]
+                    }).code;
+                    var runner = document.createElement('script');
+                    runner.textContent = out;
+                    document.body.appendChild(runner);
+                } catch (e) {
+                    document.getElementById('root').innerHTML =
+                        '<div style="padding:24px;color:#fff;font-family:sans-serif">' +
+                        'Lỗi khi tải ứng dụng: ' + (e && e.message ? e.message : e) + '</div>';
+                    console.error('[v0] App bootstrap error:', e);
+                }
+            }
+            if (window.Babel) compileAndRun();
+            else window.addEventListener('load', compileAndRun);
+        })();
     </script>
 </body>
 </html>
